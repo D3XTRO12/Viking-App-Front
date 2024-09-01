@@ -5,8 +5,7 @@ ios/
 android/
 *.js
 *.json
-*.ts
-*.tsx
+
 
 # Expo
 .expo/
