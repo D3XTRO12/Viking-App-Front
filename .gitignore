@@ -1,0 +1,45 @@
+# React Native
+# React Native built files
+build/
+ios/
+android/
+*.js
+*.json
+*.ts
+*.tsx
+
+# Expo
+.expo/
+.expo-shared/
+npm-debug.log
+yarn-error.log
+package-lock.json
+yarn.lock
+
+# TypeScript
+*.tsbuildinfo
+*.d.ts
+
+# Logs
+logs
+log.txt
+*.log
+
+# Cache
+node_modules/
+.pnpm-debug.log
+.pnp.*
+.cache/
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+
+# Operating System
+.DS_Store
+Thumbs.db
+*.tmp
+*.temp
