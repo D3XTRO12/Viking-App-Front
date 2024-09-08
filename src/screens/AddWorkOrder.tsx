@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TextInput, Button, Alert, KeyboardAvoidingView, Platform, FlatList, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, Alert, KeyboardAvoidingView, Platform, FlatList, TouchableOpacity } from 'react-native';
 import { useCommonHooks } from '../components/hooks/useCommonHooks';
 import { searchClient } from '../components/axios/ClientsAxios';
 import { searchDevices } from '../components/axios/DeviceAxios';
@@ -109,7 +109,7 @@ const AddWorkOrder: React.FC = () => {
                   <Text style={styles.clientInfoText}>Datos del Cliente:</Text>
                   <Text>ID: {foundClient.id}</Text>
                   <Text>DNI: {foundClient.dni}</Text>
-                  <Text>Nombre Completo: {foundClient.fullName}</Text>
+                  <Text>Nombre: {foundClient.name}</Text>
                 </View>
               )}
             </>
@@ -141,7 +141,9 @@ const AddWorkOrder: React.FC = () => {
                       style={styles.deviceItem}
                     >
                       <Text>{item.brand} {item.model}</Text>
+                      <Text>Tipo: {item.type}</Text>
                       <Text>Número de serie: {item.serialNumber}</Text>
+                      <Text>Nombre del Cliente: {item.clientName}</Text>
                     </TouchableOpacity>
                   )}
                   keyExtractor={(item) => item.id.toString()}
@@ -152,7 +154,9 @@ const AddWorkOrder: React.FC = () => {
                 <View style={styles.selectedDeviceContainer}>
                   <Text style={styles.label}>Dispositivo seleccionado:</Text>
                   <Text>{selectedDevice.brand} {selectedDevice.model}</Text>
+                  <Text>Tipo: {selectedDevice.type}</Text>
                   <Text>Número de serie: {selectedDevice.serialNumber}</Text>
+                  <Text>Nombre del Cliente: {selectedDevice.clientName}</Text>
                 </View>
               )}
             </>
@@ -175,7 +179,6 @@ const AddWorkOrder: React.FC = () => {
                 keyboardType="numeric"
                 style={styles.input}
               />
-
               <Text style={styles.label}>Estatus de reparación</Text>
               <TextInput
                 value={repairStatus}
@@ -183,7 +186,7 @@ const AddWorkOrder: React.FC = () => {
                 placeholder="Estatus de reparación"
                 style={styles.input}
               />
-              <ConfirmButton title="Agregar Orden de Trabajo" onPress={handleSubmit}/>
+              <ConfirmButton title="Agregar Orden de Trabajo" onPress={handleSubmit} />
             </>
           ),
         },
