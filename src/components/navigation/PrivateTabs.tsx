@@ -32,18 +32,19 @@ const PrivateTabs = () => {
         tabBarIcon: ({ color, size }) => {
           let iconName: string;
           switch (route.name) {
-            case 'AddWorkOrder':
-              iconName = 'add-circle';
-              break;
-            case 'AddDiagnosticPoint':
-              iconName = 'medical';
-              break;
             case 'AddClients':
               iconName = 'person-add';
               break;
             case 'AddDevice':
               iconName = 'hardware-chip';
               break;
+            case 'AddWorkOrder':
+              iconName = 'add-circle';
+              break;
+            case 'AddDiagnosticPoint':
+              iconName = 'medical';
+              break;
+            
             default:
               iconName = 'ellipse';
           }
@@ -60,10 +61,10 @@ const PrivateTabs = () => {
         ),
       })}
     >
-      <PrivateTab.Screen name="AddWorkOrder" component={AddWorkOrder} />
-      <PrivateTab.Screen name="AddDiagnosticPoint" component={AddDiagnosticPoint} />
       <PrivateTab.Screen name="AddClients" component={AddClients} />
       <PrivateTab.Screen name="AddDevice" component={AddDevice} />
+      <PrivateTab.Screen name="AddWorkOrder" component={AddWorkOrder} />
+      <PrivateTab.Screen name="AddDiagnosticPoint" component={AddDiagnosticPoint} />
     </PrivateTab.Navigator>
   );
 };
