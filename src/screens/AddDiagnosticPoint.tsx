@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image, ScrollView } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import ConfirmButton from '../components/buttons/ConfirmButton';
+import styles from '../components/styles/DiagnosticPointStyles';
+import ImagePickerButton from '../components/buttons/ImagePickerButton';
 
 interface DiagnosticPoint {
   workOrder: {
@@ -18,9 +21,7 @@ const AddDiagnosticPoint: React.FC = () => {
     description: '',
     notes: ''
   });
-
   const [imageUri, setImageUri] = useState<string | null>(null);
-
   const handleImagePicker = async () => {
     let result = await ImagePicker.launchCameraAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.All,
@@ -81,91 +82,64 @@ const AddDiagnosticPoint: React.FC = () => {
   
   return (
     <ScrollView style={styles.container}>
-      <Text style={styles.title}>Enviar Diagnóstico Informático</Text>
-
-      <TextInput 
-        placeholder="ID de la orden de trabajo"
-        keyboardType="numeric"
-        value={diagnosticData.workOrder.id}
-        onChangeText={(text) => setDiagnosticData({ ...diagnosticData, workOrder: { ...diagnosticData.workOrder, id: text } })}
-        style={styles.input}
-      />
-      
-      <TextInput 
-        placeholder="Descripción del problema"
-        multiline={true}
-        numberOfLines={4}
-        value={diagnosticData.description}
-        onChangeText={(text) => setDiagnosticData({ ...diagnosticData, description: text })}
-        style={[styles.input, styles.multilineInput]}
-      />
-      
-      <TextInput 
-        placeholder="Notas adicionales"
-        multiline={true}
-        numberOfLines={4}
-        value={diagnosticData.notes}
-        onChangeText={(text) => setDiagnosticData({ ...diagnosticData, notes: text })}
-        style={[styles.input, styles.multilineInput]}
-      />
-      
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity onPress={handleImagePicker}>
-          <Text style={styles.buttonText}>Seleccionar imagen</Text>
-        </TouchableOpacity>
+      <View style={styles.headerContainer}>
+        <Text style={styles.title}>Enviar Diagnóstico Informático</Text>
       </View>
 
-      {imageUri && (
-        <Image 
-          source={{ uri: imageUri }}
-          style={styles.imagePreview}
-        />
-      )}
+      <View style={styles.formContainer}>
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>Información de la Orden de Trabajo</Text>
+          <TextInput 
+            placeholder="ID de la orden de trabajo"
+            keyboardType="numeric"
+            value={diagnosticData.workOrder.id}
+            onChangeText={(text) => setDiagnosticData({ ...diagnosticData, workOrder: { ...diagnosticData.workOrder, id: text } })}
+            style={styles.input}
+          />
+        </View>
 
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity onPress={submitForm}>
-          <Text style={styles.buttonText}>Enviar diagnóstico</Text>
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>Descripción del Problema</Text>
+          <TextInput 
+            placeholder="Descripción del problema"
+            multiline={true}
+            numberOfLines={4}
+            value={diagnosticData.description}
+            onChangeText={(text) => setDiagnosticData({ ...diagnosticData, description: text })}
+            style={[styles.input, styles.multilineInput]}
+          />
+        </View>
+
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>Notas Adicionales</Text>
+          <TextInput 
+            placeholder="Notas adicionales"
+            multiline={true}
+            numberOfLines={4}
+            value={diagnosticData.notes}
+            onChangeText={(text) => setDiagnosticData({ ...diagnosticData, notes: text })}
+            style={[styles.input, styles.multilineInput]}
+          />
+        </View>
+
+        <TouchableOpacity onPress={handleImagePicker} style={styles.button}>
+          <Text style={styles.buttonText}>Seleccionar imagen</Text>
         </TouchableOpacity>
+
+        {imageUri && (
+          <View style={styles.imageContainer}>
+            <Image 
+              source={{ uri: imageUri }}
+              style={styles.imagePreview}
+            />
+          </View>
+        )}
+
+          <ConfirmButton title="Enviar diagnóstico" onPress={submitForm}/>
       </View>
     </ScrollView>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    marginBottom: 15,
-  },
-  multilineInput: {
-    textAlignVertical: 'top',
-  },
-  buttonContainer: {
-    marginTop: 10,
-    alignItems: 'center',
-  },
-  buttonText: {
-    fontSize: 16,
-    color: '#007AFF',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-  },
-  imagePreview: {
-    width: 200,
-    height: 200,
-    margin: 10,
-  },
-});
 
 export default AddDiagnosticPoint;
