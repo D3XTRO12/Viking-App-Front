@@ -1,10 +1,9 @@
-// src/context/AuthContext.tsx
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 
 type User = {
   email: string;
-  password: string;
+  token: string;
 };
 
 type AuthContextType = {
@@ -12,42 +11,70 @@ type AuthContextType = {
   setUser: (user: User | null) => void;
   login: (user: User) => Promise<void>;
   logout: () => Promise<void>;
+  isAuthenticated: boolean;
+  isLoading: boolean;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    // Cargar usuario desde AsyncStorage al iniciar la app
     const loadUser = async () => {
-      const storedUser = await AsyncStorage.getItem('user');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
+      setIsLoading(true);
+      try {
+        const storedToken = await SecureStore.getItemAsync('token');
+        if (storedToken) {
+          setUser({ email: '', token: storedToken });
+        }
+      } catch (error) {
+        console.error('Error cargando usuario:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
     loadUser();
   }, []);
 
   const login = async (userData: User) => {
-    await AsyncStorage.setItem('user', JSON.stringify(userData));
-    setUser(userData);
+    setIsLoading(true);
+    try {
+      await SecureStore.setItemAsync('token', userData.token);
+      setUser(userData);
+    } catch (error) {
+      console.error('Error durante el login:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const logout = async () => {
-    await AsyncStorage.removeItem('user');
-    setUser(null);
+    setIsLoading(true);
+    try {
+      await SecureStore.deleteItemAsync('token');
+      setUser(null);
+    } catch (error) {
+      console.error('Error durante el logout:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  return (
-    <AuthContext.Provider value={{ user, setUser, login, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  const value: AuthContextType = {
+    user,
+    setUser,
+    login,
+    logout,
+    isAuthenticated: !!user,
+    isLoading
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-export const useAuth = () => {
+export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');

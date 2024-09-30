@@ -1,9 +1,16 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, FlatList, Image, Modal, TouchableOpacity } from 'react-native';
-import { PinchGestureHandler, State, GestureHandlerRootView } from 'react-native-gesture-handler';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
-
+import { View, Text, TextInput, Button, StyleSheet, FlatList, Image, Modal, TouchableOpacity, Dimensions } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+  runOnJS,
+} from 'react-native-reanimated';
+import {
+  Gesture,
+  GestureDetector,
+} from 'react-native-gesture-handler';
 
 interface DiagnosticPoint {
   id: number;
@@ -11,6 +18,8 @@ interface DiagnosticPoint {
   description: string;
   multimediaFiles: string[];
 }
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const WorkOrder: React.FC = () => {
   const [orderNumber, setOrderNumber] = useState<string>('');
@@ -20,12 +29,15 @@ const WorkOrder: React.FC = () => {
   const [modalVisible, setModalVisible] = useState<boolean>(false);
 
   const scale = useSharedValue<number>(1);
-  const focalX = useSharedValue<number>(0);
-  const focalY = useSharedValue<number>(0);
+  const savedScale = useSharedValue<number>(1);
+  const translateX = useSharedValue<number>(0);
+  const translateY = useSharedValue<number>(0);
+  const focusX = useSharedValue<number>(0);
+  const focusY = useSharedValue<number>(0);
 
   const handleSearch = async () => {
     try {
-      const response = await fetch(`http://172.28.205.8:8080/diagnostic-points/by-work-order/${orderNumber}/client/${documentNumber}`, {
+      const response = await fetch(`http://172.28.205.8:8080/auth/diagnostic-points/by-work-order/${orderNumber}/client/${documentNumber}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -44,44 +56,69 @@ const WorkOrder: React.FC = () => {
   const handleImagePress = (fileUrl: string) => {
     setSelectedImage(fileUrl);
     setModalVisible(true);
-    scale.value = withTiming(1); // Restablecer el zoom al abrir el modal
+    resetZoom();
   };
 
   const closeModal = () => {
     setModalVisible(false);
     setSelectedImage(null);
+    resetZoom();
   };
 
-  // Manejar el evento de gesto de zoom (pinch)
-  const pinchGesture = Gesture.Pinch()
-  .onBegin(() => {
-    scale.value = scale.value;
-    focalX.value = focalX.value;
-    focalY.value = focalY.value;
-  })
-  .onChange((event) => {
-    scale.value = scale.value * event.scale;
-    
-    // Calcula el nuevo enfoque usando solo focalX y focalY
-    const newFocalX = 200 - (200 - focalX.value) * (event.focalX / event.focalX);
-    const newFocalY = 200 - (200 - focalY.value) * (event.focalY / event.focalY);
-    
-    focalX.value = newFocalX;
-    focalY.value = newFocalY;
-  })
-  .onEnd(() => {
+  const resetZoom = () => {
     scale.value = withTiming(1);
-    focalX.value = withTiming(0);
-    focalY.value = withTiming(0);
-  });
+    translateX.value = withTiming(0);
+    translateY.value = withTiming(0);
+    savedScale.value = 1;
+  };
 
-const pinchStyle = useAnimatedStyle(() => ({
-  transform: [
-    { scale: scale.value },
-    { translateX: focalX.value },
-    { translateY: focalY.value },
-  ],
-}));
+  const pinchGesture = Gesture.Pinch()
+    .onStart((event) => {
+      focusX.value = event.focalX;
+      focusY.value = event.focalY;
+      savedScale.value = scale.value;
+    })
+    .onUpdate((event) => {
+      scale.value = Math.max(savedScale.value * event.scale, 1);
+      translateX.value = event.focalX - focusX.value;
+      translateY.value = event.focalY - focusY.value;
+    })
+    .onEnd(() => {
+      translateX.value = withTiming(0);
+      translateY.value = withTiming(0);
+    });
+
+  const panGesture = Gesture.Pan()
+    .onUpdate((event) => {
+      translateX.value += event.translationX;
+      translateY.value += event.translationY;
+    })
+    .onEnd(() => {
+      translateX.value = withTiming(0);
+      translateY.value = withTiming(0);
+    });
+
+  const doubleTapGesture = Gesture.Tap()
+    .numberOfTaps(2)
+    .onStart(() => {
+      if (scale.value > 1) {
+        scale.value = withTiming(1);
+        translateX.value = withTiming(0);
+        translateY.value = withTiming(0);
+      } else {
+        scale.value = withTiming(2);
+      }
+    });
+
+  const composed = Gesture.Simultaneous(pinchGesture, panGesture, doubleTapGesture);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: translateX.value },
+      { translateY: translateY.value },
+      { scale: scale.value },
+    ],
+  }));
 
   
   return (
@@ -151,8 +188,8 @@ const pinchStyle = useAnimatedStyle(() => ({
               <Text style={styles.closeButtonText}>Cerrar</Text>
             </TouchableOpacity>
             {selectedImage && (
-              <GestureDetector gesture={pinchGesture}>
-                <Animated.View style={[styles.imageContainer, pinchStyle]}>
+              <GestureDetector gesture={composed}>
+                <Animated.View style={[styles.imageContainer, animatedStyle]}>
                   <Image
                     source={{ uri: selectedImage }}
                     style={styles.fullScreenImage}
@@ -228,11 +265,13 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
   },
   imageContainer: {
-    width: '100%',
-    height: '100%',
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   fullScreenImage: {
     width: '100%',
@@ -245,6 +284,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     padding: 10,
     borderRadius: 20,
+    zIndex: 1,
   },
   closeButtonText: {
     color: '#cc0000',

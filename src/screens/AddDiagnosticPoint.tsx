@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image, Scro
 import * as ImagePicker from 'expo-image-picker';
 import ConfirmButton from '../components/buttons/ConfirmButton';
 import styles from '../components/styles/DiagnosticPointStyles';
-import ImagePickerButton from '../components/buttons/ImagePickerButton';
+
 
 interface DiagnosticPoint {
   workOrder: {
@@ -58,7 +58,7 @@ const AddDiagnosticPoint: React.FC = () => {
 
       console.log('FormData:', formData);
 
-      const response = await fetch('http://172.28.205.8:8080/diagnostic-points/add', {
+      const response = await fetch('http://172.28.205.8:8080/auth/diagnostic-points/add', {
         method: 'POST',
         body: formData,
         headers: {

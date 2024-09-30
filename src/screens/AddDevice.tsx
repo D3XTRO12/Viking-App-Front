@@ -4,7 +4,7 @@ import { Picker } from '@react-native-picker/picker';
 import { useCommonHooks } from '../components/hooks/useCommonHooks';
 import { searchClient } from '../components/axios/ClientsAxios';
 import { saveDevice } from '../components/axios/DeviceAxios';
-import styles from '../components/styles/DeviceStyles';
+import styles from '../components/styles/Styles';
 import SectionListWrapper from '../components/wrappers-sections/SectionListWrapper';
 import SearchButton from '../components/buttons/SearchButton';
 import ConfirmButton from '../components/buttons/ConfirmButton';

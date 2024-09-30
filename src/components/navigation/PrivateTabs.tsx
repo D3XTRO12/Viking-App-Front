@@ -3,28 +3,29 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../../components/context/AuthContext';
 import AddWorkOrder from '../../screens/AddWorkOrder';
 import AddDiagnosticPoint from '../../screens/AddDiagnosticPoint';
-import AddClients from '../../screens/AddClients';
+import CreateUserScreen from '../../screens/HandleUsers';
 import AddDevice from '../../screens/AddDevice';
-import { RootStackParamList } from '../../../App';
-type PrivateTabParamList = {
-  AddWorkOrder: undefined;
-  AddDiagnosticPoint: undefined;
-  AddClients: undefined;
-  AddDevice: undefined;
-};
+import { PrivateTabParamList, RootStackParamList } from './Types';
 
 const PrivateTab = createBottomTabNavigator<PrivateTabParamList>();
 
 const PrivateTabs = () => {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
-  const { logout } = useAuth();
+  const { logout, isAuthenticated } = useAuth();
+
+  React.useEffect(() => {
+    if (!isAuthenticated) {
+      navigation.navigate('PublicTabs');
+    }
+  }, [isAuthenticated, navigation]);
 
   const handleLogout = async () => {
     await logout();
   };
+
 
   return (
     <PrivateTab.Navigator
@@ -32,7 +33,7 @@ const PrivateTabs = () => {
         tabBarIcon: ({ color, size }) => {
           let iconName: string;
           switch (route.name) {
-            case 'AddClients':
+            case 'CreateUSerScreen':
               iconName = 'person-add';
               break;
             case 'AddDevice':
@@ -44,7 +45,6 @@ const PrivateTabs = () => {
             case 'AddDiagnosticPoint':
               iconName = 'medical';
               break;
-            
             default:
               iconName = 'ellipse';
           }
@@ -61,12 +61,41 @@ const PrivateTabs = () => {
         ),
       })}
     >
-      <PrivateTab.Screen name="AddClients" component={AddClients} />
-      <PrivateTab.Screen name="AddDevice" component={AddDevice} />
-      <PrivateTab.Screen name="AddWorkOrder" component={AddWorkOrder} />
-      <PrivateTab.Screen name="AddDiagnosticPoint" component={AddDiagnosticPoint} />
+      <PrivateTab.Screen 
+        name="CreateUSerScreen" 
+        component={CreateUserScreen} 
+        options={{ 
+          tabBarLabel: 'Usuarios', // Cambia el nombre aquí
+          title: 'Gestion de Usuarios' // Cambia el título aquí
+        }} 
+      />
+      <PrivateTab.Screen 
+        name="AddDevice" 
+        component={AddDevice} 
+        options={{ 
+          tabBarLabel: 'Agregar Dispositivo', // Cambia el nombre aquí
+          title: 'Agregar Nuevo Dispositivo' // Cambia el título aquí
+        }} 
+      />
+      <PrivateTab.Screen 
+        name="AddWorkOrder" 
+        component={AddWorkOrder} 
+        options={{ 
+          tabBarLabel: 'Agregar Orden de Trabajo', // Cambia el nombre aquí
+          title: 'Agregar Nueva Orden de Trabajo' // Cambia el título aquí
+        }} 
+      />
+      <PrivateTab.Screen 
+        name="AddDiagnosticPoint" 
+        component={AddDiagnosticPoint} 
+        options={{ 
+          tabBarLabel: 'Agregar Punto de Diagnóstico', // Cambia el nombre aquí
+          title: 'Agregar Nuevo Punto de Diagnóstico' // Cambia el título aquí
+        }} 
+      />
     </PrivateTab.Navigator>
   );
 };
 
 export default PrivateTabs;
+

@@ -1,39 +1,58 @@
 import React, { useState } from 'react';
 import { View, TextInput, TouchableOpacity, Text, StyleSheet, Alert } from 'react-native';
-import { useAuth } from '../components/context/AuthContext';
+import api from '../components/axios/Axios'; // Importa el nuevo archivo Axios.tsx
+import * as SecureStore from 'expo-secure-store';
+import { useAuth } from '../components/context/AuthContext'; // Importa el contexto de autenticación
+import { useNavigation } from '@react-navigation/native'; // Importa useNavigation
+import { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList } from '../components/navigation/Types'; // O donde tengas definido tu stack
+
+interface AuthResponse {
+  accessToken: string;
+  tokenType: string;
+}
 
 const Login: React.FC = () => {
-  const { login } = useAuth();
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>(); // Añade la navegación
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const { login, isAuthenticated, isLoading } = useAuth();
 
   const handleLogin = async () => {
     try {
-      const response = await fetch('http://172.28.205.8:8080/login/staff', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (response.ok) {
-        const staff = await response.json();
-        console.log('Usuario autenticado:', staff);
-        await login(staff);
-        // No necesitas navegar manualmente, App.tsx se encargará de esto
-      } else {
+      const response = await api.post('/auth/login', { email, password });
+      if (response && response.status === 200) {
+        const authData: AuthResponse = response.data;
+        
+        // Asegúrate de que el token sea una cadena
+        const token = authData.accessToken;
+        if (typeof token !== 'string') {
+          throw new Error('El token recibido no es una cadena válida');
+        }
+  
+        // Guarda el token como una cadena
+        await SecureStore.setItemAsync('token', token);
+        
+        // Llama a la función login del contexto de autenticación
+        await login({ email, token });
+        
+        Alert.alert('Éxito', 'Iniciaste sesión correctamente');
+      } else if (response && response.status >= 400) {
         Alert.alert('Error', 'Credenciales inválidas');
-        console.log(await response.text());
-        console.error('Credenciales inválidas');
+        console.error('Credenciales inválidas:', response.data);
+      } else {
+        Alert.alert('Error', 'Ocurrió un error inesperado');
+        console.error('Respuesta inesperada:', response);
       }
     } catch (error) {
       console.error('Error durante el login:', error);
-      Alert.alert('Error', 'Ocurrió un error durante el login');
+      if (error instanceof Error) {
+        Alert.alert('Error', `Ocurrió un error durante el login: ${error.message}`);
+      } else {
+        Alert.alert('Error', 'Ocurrió un error desconocido durante el login');
+      }
     }
-  };
-
-  return (
+  };  return (
     <View style={styles.container}>
       <TextInput
         style={styles.input}
@@ -50,13 +69,16 @@ const Login: React.FC = () => {
         onChangeText={setPassword}
         secureTextEntry
       />
-      <TouchableOpacity style={styles.button} onPress={handleLogin}>
-        <Text style={styles.buttonText}>Iniciar Sesión</Text>
+      <TouchableOpacity 
+        style={styles.button} 
+        onPress={handleLogin}
+        disabled={isLoading}
+      >
+        <Text style={styles.buttonText}>{isLoading ? 'Iniciando...' : 'Iniciar Sesión'}</Text>
       </TouchableOpacity>
     </View>
   );
 };
-
 
 const styles = StyleSheet.create({
   container: {
@@ -75,6 +97,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'blue',
     padding: 10,
     alignItems: 'center',
+    opacity: 0.6,
   },
   buttonText: {
     color: 'white',
