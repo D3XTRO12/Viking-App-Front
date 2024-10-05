@@ -10,7 +10,7 @@ export const useCommonHooks = () => {
   const [selectedDevice, setSelectedDevice] = useState<DeviceInterface | null>(null);
 
   // Agregar los estados adicionales
-  const [description, setDescription] = useState('');
+  const [issueDescription, setIssueDescription] = useState('');
   const [staffId, setStaffId] = useState('');
   const [repairStatus, setRepairStatus] = useState('');
 
@@ -23,7 +23,7 @@ export const useCommonHooks = () => {
   };
 
   const resetForm = () => {
-    setDescription('');
+    setIssueDescription('');
     resetClientAndDevices();
     setStaffId('');
     setRepairStatus('');
@@ -40,8 +40,8 @@ export const useCommonHooks = () => {
     setDevices,
     selectedDevice,
     setSelectedDevice,
-    description,
-    setDescription,
+    issueDescription,
+    setIssueDescription,
     staffId,
     setStaffId,
     repairStatus,

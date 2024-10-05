@@ -1,9 +1,9 @@
 import React from 'react';
-import {Text, TextInput, Alert, TouchableOpacity, KeyboardAvoidingView, Platform, KeyboardTypeOptions } from 'react-native';
+import { Text, TextInput, Alert, TouchableOpacity, KeyboardAvoidingView, Platform, KeyboardTypeOptions } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { useCommonHooks } from '../components/hooks/useCommonHooks';
 import { searchClient } from '../components/axios/ClientsAxios';
-import { saveDevice } from '../components/axios/DeviceAxios';
+import api from '../components/axios/Axios'; // Importa el módulo api
 import styles from '../components/styles/Styles';
 import SectionListWrapper from '../components/wrappers-sections/SectionListWrapper';
 import SearchButton from '../components/buttons/SearchButton';
@@ -78,13 +78,12 @@ const ClientSearchSection: React.FC<ClientSearchSectionProps> = ({ clientDni, se
         style={styles.clientItem}
       >
         <Text>ID: {foundClient.id}</Text>
-        <Text>DNI: {foundClient.dni}</Text>
         <Text>Nombre: {foundClient.name}</Text>
+        <Text>DNI: {foundClient.dni}</Text>        
       </TouchableOpacity>
     )}
   </>
 );
-
 const AddDevice: React.FC = () => {
   const {
     clientDni,
@@ -99,6 +98,7 @@ const AddDevice: React.FC = () => {
   const [brand, setBrand] = React.useState('');
   const [model, setModel] = React.useState('');
   const [serialNumber, setSerialNumber] = React.useState('');
+  const [selectedClientMessage, setSelectedClientMessage] = React.useState(''); // Nuevo estado para el mensaje
 
   const deviceTypes = [
     'Computadora de Escritorio',
@@ -122,12 +122,20 @@ const AddDevice: React.FC = () => {
       Alert.alert('Error', 'Por favor ingresa un DNI.');
       return;
     }
-    await searchClient(clientDni, setFoundClient);
+    try {
+      const response = await api.get(`/api/user/search?query=by-dni&dni=${clientDni}`);
+      const clientData: ClientInterface = response.data; // Asegúrate de que la estructura de la respuesta sea correcta
+      setFoundClient(clientData);
+      setSelectedClientMessage(''); // Resetea el mensaje al buscar
+    } catch (error) {
+      console.error('Error al buscar el cliente:', error);
+      Alert.alert('Error', 'No se pudo encontrar al cliente');
+    }
   };
 
   const handleClientSelect = (client: ClientInterface): void => {
     setFoundClient(client);
-    Alert.alert('Cliente seleccionado', `Has seleccionado a ${client.name}`);
+    setSelectedClientMessage(`Has seleccionado a ${client.name}`); // Establece el mensaje
   };
 
   const handleSubmit = async () => {
@@ -141,27 +149,22 @@ const AddDevice: React.FC = () => {
       brand,
       model,
       serialNumber,
-      clientId: foundClient.id // Asegúrate de que estás enviando clientId, no client
+      userId: foundClient.id // Asegúrate de que estás enviando userId
     };
   
     try {
-      const success = await saveDevice(deviceData);
-      if (success) {
-        Alert.alert('Éxito', 'Dispositivo agregado correctamente');
-        resetForm();
-        setType('');
-        setBrand('');
-        setModel('');
-        setSerialNumber('');
-      } else {
-        Alert.alert('Error', 'No se pudo agregar el dispositivo');
-      }
+      const response = await api.post('/api/device/save', deviceData);
+      Alert.alert('Éxito', response.data); // Suponiendo que la respuesta es un mensaje
+      resetForm();
+      setType('');
+      setBrand('');
+      setModel('');
+      setSerialNumber('');
     } catch (error) {
       console.error('Error al guardar el dispositivo:', error);
       Alert.alert('Error', 'Ocurrió un problema al guardar el dispositivo');
     }
   };
-  
 
   const sections = [
     {
@@ -228,6 +231,15 @@ const AddDevice: React.FC = () => {
             />
           ),
         },
+        // Mostrar mensaje de selección
+        {
+          key: 'Mensaje Selección',
+          component: (
+            <Text style={styles.selectedClientMessage}>
+              {selectedClientMessage}
+            </Text>
+          ),
+        },
       ],
     },
     {
@@ -237,6 +249,14 @@ const AddDevice: React.FC = () => {
           key: 'Agregar Dispositivo',
           component: (
             <ConfirmButton title="Agregar Dispositivo" onPress={handleSubmit} />
+          ),
+        },
+        {
+          key: 'Volver',
+          component: (
+            <TouchableOpacity onPress={() => { /* Lógica para volver */ }} style={styles.backButton}>
+              <Text style={styles.buttonText}>Volver</Text>
+            </TouchableOpacity>
           ),
         },
       ],

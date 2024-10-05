@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image, Scro
 import * as ImagePicker from 'expo-image-picker';
 import ConfirmButton from '../components/buttons/ConfirmButton';
 import styles from '../components/styles/DiagnosticPointStyles';
+import { API_URL } from '@env';
 
 
 interface DiagnosticPoint {
@@ -58,7 +59,7 @@ const AddDiagnosticPoint: React.FC = () => {
 
       console.log('FormData:', formData);
 
-      const response = await fetch('http://172.28.205.8:8080/auth/diagnostic-points/add', {
+      const response = await fetch(`${API_URL}/api/diagnostic-points/add`, {
         method: 'POST',
         body: formData,
         headers: {

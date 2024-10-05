@@ -4,6 +4,6 @@ export interface DeviceInterface {
   type:string
   brand: string;
   model: string;
-  clientId: number;
-  clientName: string; // Añadir esta línea
+  userId: string;
+  userName: string; // Añadir esta línea
 }

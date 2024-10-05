@@ -6,7 +6,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { useAuth } from '../../components/context/AuthContext';
 import AddWorkOrder from '../../screens/AddWorkOrder';
 import AddDiagnosticPoint from '../../screens/AddDiagnosticPoint';
-import CreateUserScreen from '../../screens/HandleUsers';
+import HandleUsers from '../../screens/Users/HandleUsers';
 import AddDevice from '../../screens/AddDevice';
 import { PrivateTabParamList, RootStackParamList } from './Types';
 
@@ -33,7 +33,7 @@ const PrivateTabs = () => {
         tabBarIcon: ({ color, size }) => {
           let iconName: string;
           switch (route.name) {
-            case 'CreateUSerScreen':
+            case 'HandleUsers':
               iconName = 'person-add';
               break;
             case 'AddDevice':
@@ -62,8 +62,8 @@ const PrivateTabs = () => {
       })}
     >
       <PrivateTab.Screen 
-        name="CreateUSerScreen" 
-        component={CreateUserScreen} 
+        name="HandleUsers" 
+        component={HandleUsers} 
         options={{ 
           tabBarLabel: 'Usuarios', // Cambia el nombre aquí
           title: 'Gestion de Usuarios' // Cambia el título aquí

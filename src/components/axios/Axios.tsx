@@ -1,11 +1,17 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
+import { API_URL } from '@env';
 const api = axios.create({
-  baseURL: 'http://172.28.205.8:8080',
+  baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
 });
+// Función para establecer el token de autenticación
+export const setAuthToken = (token: string) => {
+  api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+};
+
 // Añade un interceptor de solicitud
 api.interceptors.request.use(
     async (config) => {

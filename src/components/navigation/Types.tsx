@@ -10,7 +10,7 @@ export type RootStackParamList = {
 export type PrivateTabParamList = {
   AddWorkOrder: undefined;
   AddDiagnosticPoint: undefined;
-  CreateUSerScreen: undefined;
+  HandleUsers: undefined;
   AddDevice: undefined;
 };
 
