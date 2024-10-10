@@ -1,21 +1,42 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image, ScrollView } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, Image, Alert } from 'react-native';
 import ConfirmButton from '../components/buttons/ConfirmButton';
-import styles from '../components/styles/DiagnosticPointStyles';
-import { API_URL } from '@env';
+import styles from '../components/styles/Styles';
+import { useAuth } from '../components/context/AuthContext';
+import api from '../components/axios/Axios';
+import * as ImagePicker from 'expo-image-picker';
+import { Button } from 'react-native-paper';
+import { FlashList } from '@shopify/flash-list';
 
+interface WorkOrder {
+  id: string;
+  deviceId: string;
+  issueDescription: string;
+}
+
+interface Device {
+  brand: string;
+  model: string;
+  serialNumber: string;
+}
+
+interface WorkOrderWithDevice extends WorkOrder {
+  device?: Device;
+}
 
 interface DiagnosticPoint {
-  workOrder: {
-    id: string;
-  };
+  workOrder: { id: string };
   timestamp: string;
   description: string;
   notes: string;
+  image?: string;
 }
 
 const AddDiagnosticPoint: React.FC = () => {
+  const { user, getToken } = useAuth();
+  const [workOrders, setWorkOrders] = useState<WorkOrderWithDevice[]>([]);
+  const [selectedWorkOrderDetails, setSelectedWorkOrderDetails] = useState<WorkOrderWithDevice | null>(null);
+  const [selectedWorkOrder, setSelectedWorkOrder] = useState<string | null>(null);
   const [diagnosticData, setDiagnosticData] = useState<DiagnosticPoint>({
     workOrder: { id: '' },
     timestamp: new Date().toISOString(),
@@ -23,8 +44,9 @@ const AddDiagnosticPoint: React.FC = () => {
     notes: ''
   });
   const [imageUri, setImageUri] = useState<string | null>(null);
+
   const handleImagePicker = async () => {
-    let result = await ImagePicker.launchCameraAsync({
+    const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.All,
       allowsEditing: true,
       aspect: [4, 4],
@@ -32,23 +54,79 @@ const AddDiagnosticPoint: React.FC = () => {
     });
 
     if (!result.canceled) {
-      setImageUri(result.assets[0].uri);
+      const uri = result.assets[0].uri;
+      setImageUri(uri);
+      setDiagnosticData({ ...diagnosticData, image: uri });
+    }
+  };
+
+  useEffect(() => {
+    fetchWorkOrders();
+    renderWorkOrder;
+  }, [user]);
+
+  const fetchWorkOrders = async () => {
+    if (!user || !user.email) {
+      console.error('No se encontró el email del usuario autenticado');
+      Alert.alert('Error', 'No se pudo obtener la información del usuario.');
+      return;
+    }
+
+    try {
+      const userResponse = await api.get(`/api/user/search?query=by-email&email=${encodeURIComponent(user.email)}`);
+      const userId = userResponse.data?.id;
+      if (!userId) throw new Error('No se pudo obtener el ID del usuario');
+
+      const workOrderResponse = await api.get(`/api/work-order/search?query=by-staffid&staffId=${userId}`);
+      const workOrdersData = workOrderResponse.data as WorkOrder[];
+
+      const workOrdersWithDevices = await Promise.all(workOrdersData.map(async (workOrder) => {
+        try {
+          const deviceResponse = await api.get(`/api/device/search?query=by-id&id=${workOrder.deviceId}`);
+          const deviceData = deviceResponse.data;
+          return {
+            ...workOrder,
+            device: {
+              brand: deviceData.brand,
+              model: deviceData.model,
+              serialNumber: deviceData.serialNumber
+            }
+          };
+        } catch (error) {
+          console.error(`Error fetching device for work order ${workOrder.id}:`, error);
+          return workOrder;
+        }
+      }));
+
+      setWorkOrders(workOrdersWithDevices);   
+    } catch (error) {
+      console.error('Error fetching work orders:', error);
+      Alert.alert('Error', 'No se pudieron cargar las órdenes de trabajo.');
     }
   };
 
   const submitForm = async () => {
+    if (!selectedWorkOrder || !diagnosticData.description || !diagnosticData.notes) {
+      Alert.alert('Error', 'Todos los campos son obligatorios.');
+      return;
+    }
+
     try {
+      const token = await getToken();
       const formData = new FormData();
+      const diagnosticPoint = {
+        workOrder: { id: selectedWorkOrder },
+        timestamp: diagnosticData.timestamp,
+        description: diagnosticData.description,
+        notes: diagnosticData.notes
+      };
 
-      // Agregar el objeto diagnosticPoint como parte del FormData
-      formData.append('diagnosticPoint', JSON.stringify(diagnosticData));
+      formData.append('diagnosticPoint', JSON.stringify(diagnosticPoint));
 
-      // Agregar la imagen como archivo con nombre único
       if (imageUri) {
         const uriParts = imageUri.split('.');
         const fileType = uriParts[uriParts.length - 1];
-        const timestamp = new Date().getTime(); // Timestamp actual en milisegundos
-        const uniqueFileName = `workOrder_${diagnosticData.workOrder.id}_${timestamp}.${fileType}`;
+        const uniqueFileName = `workOrder_${selectedWorkOrder}_${Date.now()}.${fileType}`;
 
         formData.append('file', {
           uri: imageUri,
@@ -57,90 +135,153 @@ const AddDiagnosticPoint: React.FC = () => {
         } as any);
       }
 
-      console.log('FormData:', formData);
+      console.log('FormData:', JSON.stringify(formData));
 
-      const response = await fetch(`${API_URL}/api/diagnostic-points/add`, {
-        method: 'POST',
-        body: formData,
-        headers: {
-          'Accept': 'application/json',
-        },
-      });
+      try {
+        const response = await api.post('/api/diagnostic-points/add', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+          },
+          timeout: 30000, // Set a longer timeout (30 seconds)
+        });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        console.log('Response:', response);
+
+        if (response && response.status === 200) {
+          Alert.alert('Éxito', 'Diagnóstico enviado con éxito');
+        } else {
+          throw new Error(`Error en la solicitud: ${response ? response.status : 'No response'}`);
+        }
+      } catch (apiError: any) {
+        console.error('Error en la llamada API:', apiError);
+        console.error('Error details:', apiError.response ? apiError.response.data : 'No response data');
+        Alert.alert('Error', `No se pudo enviar el diagnóstico. ${apiError.message}`);
       }
-
-      const result = await response.json();
-      console.log('Resultado:', result);
-
-      Alert.alert('Éxito', 'Diagnóstico enviado con éxito');
     } catch (error) {
-      console.error('Error al enviar el formulario:', error);
-      Alert.alert('Error', 'Ocurrió un error al enviar el diagnóstico. Por favor, inténtelo de nuevo.');
+      console.error('Error al preparar el formulario:', error);
+      Alert.alert('Error', 'No se pudo preparar el diagnóstico. Por favor, inténtalo de nuevo.');
     }
   };
+  const resetSelectedWorkOrder = () => {
+    setSelectedWorkOrder(null);
+    setSelectedWorkOrderDetails(null);
+  };
   
+  const handleSelectWorkOrder = (id: string) => {
+    resetSelectedWorkOrder();
+    const selectedOrder = workOrders.find(order => order.id === id) || null;
+    setSelectedWorkOrder(id);
+    setSelectedWorkOrderDetails(selectedOrder);
+    setDiagnosticData({ ...diagnosticData, workOrder: { id } });
+  };
+
+  const renderWorkOrder = ({ item }: { item: WorkOrderWithDevice }) => (
+    <TouchableOpacity 
+      onPress={() => handleSelectWorkOrder(item.id)} 
+      style={[
+        styles.workOrderItem,
+        selectedWorkOrder === item.id && styles.selectedWorkOrderItem
+      ]}
+    >
+      <Text style={[
+        styles.workOrderText,
+        selectedWorkOrder === item.id && styles.selectedWorkOrderText
+      ]}>Orden de Trabajo: {item.id}</Text>
+      <Text style={[
+        styles.workOrderText,
+        selectedWorkOrder === item.id && styles.selectedWorkOrderText
+      ]}>Marca: {item.device?.brand || 'N/A'}</Text>
+      <Text style={[
+        styles.workOrderText,
+        selectedWorkOrder === item.id && styles.selectedWorkOrderText
+      ]}>Modelo: {item.device?.model || 'N/A'}</Text>
+      <Text style={[
+        styles.workOrderText,
+        selectedWorkOrder === item.id && styles.selectedWorkOrderText
+      ]}>Número de Serie: {item.device?.serialNumber || 'N/A'}</Text>
+      <Text style={[
+        styles.workOrderText,
+        selectedWorkOrder === item.id && styles.selectedWorkOrderText
+      ]}>Descripción: {item.issueDescription}</Text>
+    </TouchableOpacity>
+  );
+
+  const renderWorkOrdersComponent = () => (
+    <View style={styles.flashListSectionContainer}>
+      <Text style={styles.sectionTitle}>Seleccionar Orden de Trabajo</Text>
+      <FlashList
+        data={workOrders}
+        renderItem={renderWorkOrder}
+        estimatedItemSize={100}
+        keyExtractor={(item) => item.id}
+        key={selectedWorkOrder}
+      />
+    </View>
+  );
+
+  const renderProblemDescriptionComponent = () => (
+    <View style={styles.flashListContainer}>
+      <Text style={styles.sectionTitle}>Descripción del Problema</Text>
+      <TextInput
+        placeholder="Descripción del problema"
+        multiline
+        value={diagnosticData.description}
+        onChangeText={(text) => setDiagnosticData({ ...diagnosticData, description: text })}
+        style={styles.input}
+      />
+    </View>
+  );
+
+  const renderAdditionalNotesComponent = () => (
+    <View style={styles.flashListContainer}>
+      <Text style={styles.sectionTitle}>Notas Adicionales</Text>
+      <TextInput
+        placeholder="Notas adicionales"
+        multiline
+        value={diagnosticData.notes}
+        onChangeText={(text) => setDiagnosticData({ ...diagnosticData, notes: text })}
+        style={styles.input}
+      />
+    </View>
+  );
+
+  const renderImagePickerComponent = () => (
+    <Button mode="contained" onPress={handleImagePicker} style={styles.button}>
+      Seleccionar imagen
+    </Button>
+  );
+
+  const renderImagePreviewComponent = () => {
+    if (imageUri) {
+      return (
+        <View style={styles.imageContainer}>
+          <Image 
+            source={{ uri: imageUri }} 
+            style={styles.imagePreview}
+          />
+        </View>
+      );
+    }
+    return null;
+  };
+
+  const renderSubmitButtonComponent = () => (
+    <ConfirmButton onPress={submitForm} title="Enviar Diagnóstico" />
+  );
+
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.headerContainer}>
-        <Text style={styles.title}>Enviar Diagnóstico Informático</Text>
-      </View>
-
-      <View style={styles.formContainer}>
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>Información de la Orden de Trabajo</Text>
-          <TextInput 
-            placeholder="ID de la orden de trabajo"
-            keyboardType="numeric"
-            value={diagnosticData.workOrder.id}
-            onChangeText={(text) => setDiagnosticData({ ...diagnosticData, workOrder: { ...diagnosticData.workOrder, id: text } })}
-            style={styles.input}
-          />
-        </View>
-
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>Descripción del Problema</Text>
-          <TextInput 
-            placeholder="Descripción del problema"
-            multiline={true}
-            numberOfLines={4}
-            value={diagnosticData.description}
-            onChangeText={(text) => setDiagnosticData({ ...diagnosticData, description: text })}
-            style={[styles.input, styles.multilineInput]}
-          />
-        </View>
-
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>Notas Adicionales</Text>
-          <TextInput 
-            placeholder="Notas adicionales"
-            multiline={true}
-            numberOfLines={4}
-            value={diagnosticData.notes}
-            onChangeText={(text) => setDiagnosticData({ ...diagnosticData, notes: text })}
-            style={[styles.input, styles.multilineInput]}
-          />
-        </View>
-
-        <TouchableOpacity onPress={handleImagePicker} style={styles.button}>
-          <Text style={styles.buttonText}>Seleccionar imagen</Text>
-        </TouchableOpacity>
-
-        {imageUri && (
-          <View style={styles.imageContainer}>
-            <Image 
-              source={{ uri: imageUri }}
-              style={styles.imagePreview}
-            />
-          </View>
-        )}
-
-          <ConfirmButton title="Enviar diagnóstico" onPress={submitForm}/>
-      </View>
-    </ScrollView>
+    <View style={styles.container}>
+      {renderSubmitButtonComponent()}
+      {renderWorkOrdersComponent()}
+      {renderProblemDescriptionComponent()}
+      {renderAdditionalNotesComponent()}
+      {renderImagePickerComponent()}
+      {renderImagePreviewComponent()}
+      
+    </View>
   );
 };
-
 
 export default AddDiagnosticPoint;

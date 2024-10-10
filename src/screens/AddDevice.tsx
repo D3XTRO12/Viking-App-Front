@@ -1,13 +1,19 @@
 import React from 'react';
-import { Text, TextInput, Alert, TouchableOpacity, KeyboardAvoidingView, Platform, KeyboardTypeOptions } from 'react-native';
+import axios from 'axios';
+import {
+  Text,
+  Alert,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  KeyboardTypeOptions,
+} from 'react-native';
 import { Picker } from '@react-native-picker/picker';
+import { TextInput, Button, Paragraph } from 'react-native-paper';
 import { useCommonHooks } from '../components/hooks/useCommonHooks';
-import { searchClient } from '../components/axios/ClientsAxios';
 import api from '../components/axios/Axios'; // Importa el módulo api
 import styles from '../components/styles/Styles';
 import SectionListWrapper from '../components/wrappers-sections/SectionListWrapper';
-import SearchButton from '../components/buttons/SearchButton';
-import ConfirmButton from '../components/buttons/ConfirmButton';
 import { ClientInterface } from '../components/interfaces/ClientInterface';
 
 interface InputSectionProps {
@@ -18,10 +24,17 @@ interface InputSectionProps {
   keyboardType?: KeyboardTypeOptions;
 }
 
-const InputSection: React.FC<InputSectionProps> = ({ label, value, onChangeText, placeholder, keyboardType = 'default' }) => (
+const InputSection: React.FC<InputSectionProps> = ({
+  label,
+  value,
+  onChangeText,
+  placeholder,
+  keyboardType = 'default',
+}) => (
   <>
     <Text style={styles.label}>{label}</Text>
     <TextInput
+      mode="outlined"
       style={styles.input}
       value={value}
       onChangeText={onChangeText}
@@ -38,7 +51,12 @@ interface PickerSectionProps {
   items: string[];
 }
 
-const PickerSection: React.FC<PickerSectionProps> = ({ label, selectedValue, onValueChange, items }) => (
+const PickerSection: React.FC<PickerSectionProps> = ({
+  label,
+  selectedValue,
+  onValueChange,
+  items,
+}) => (
   <>
     <Text style={styles.label}>{label}</Text>
     <Picker
@@ -62,7 +80,13 @@ interface ClientSearchSectionProps {
   handleClientSelect: (client: ClientInterface) => void;
 }
 
-const ClientSearchSection: React.FC<ClientSearchSectionProps> = ({ clientDni, setClientDni, handleClientSearch, foundClient, handleClientSelect }) => (
+const ClientSearchSection: React.FC<ClientSearchSectionProps> = ({
+  clientDni,
+  setClientDni,
+  handleClientSearch,
+  foundClient,
+  handleClientSelect,
+}) => (
   <>
     <InputSection
       label="DNI del Cliente"
@@ -71,19 +95,22 @@ const ClientSearchSection: React.FC<ClientSearchSectionProps> = ({ clientDni, se
       placeholder="DNI del Cliente"
       keyboardType="numeric"
     />
-    <SearchButton title="Buscar Cliente" onPress={handleClientSearch} />
+    <Button mode="contained" onPress={handleClientSearch} style={styles.button}>
+      Buscar Cliente
+    </Button>
     {foundClient && (
       <TouchableOpacity
         onPress={() => handleClientSelect(foundClient)}
         style={styles.clientItem}
       >
-        <Text>ID: {foundClient.id}</Text>
-        <Text>Nombre: {foundClient.name}</Text>
-        <Text>DNI: {foundClient.dni}</Text>        
+        <Paragraph style={styles.clientInfoText}>ID: {foundClient.id}</Paragraph>
+        <Paragraph style={styles.clientInfoText}>Nombre: {foundClient.name}</Paragraph>
+        <Paragraph style={styles.clientInfoText}>DNI: {foundClient.dni}</Paragraph>
       </TouchableOpacity>
     )}
   </>
 );
+
 const AddDevice: React.FC = () => {
   const {
     clientDni,
@@ -98,7 +125,7 @@ const AddDevice: React.FC = () => {
   const [brand, setBrand] = React.useState('');
   const [model, setModel] = React.useState('');
   const [serialNumber, setSerialNumber] = React.useState('');
-  const [selectedClientMessage, setSelectedClientMessage] = React.useState(''); // Nuevo estado para el mensaje
+  const [selectedClientMessage, setSelectedClientMessage] = React.useState('');
 
   const deviceTypes = [
     'Computadora de Escritorio',
@@ -124,18 +151,22 @@ const AddDevice: React.FC = () => {
     }
     try {
       const response = await api.get(`/api/user/search?query=by-dni&dni=${clientDni}`);
-      const clientData: ClientInterface = response.data; // Asegúrate de que la estructura de la respuesta sea correcta
-      setFoundClient(clientData);
-      setSelectedClientMessage(''); // Resetea el mensaje al buscar
+      if (response.data) {
+        const clientData: ClientInterface = response.data; 
+        setFoundClient(clientData);
+        setSelectedClientMessage('');
+      } else {
+        Alert.alert('Cliente no encontrado', 'No se encontró un cliente con ese DNI.');
+      }
     } catch (error) {
-      console.error('Error al buscar el cliente:', error);
+      console.error('Error al buscar el cliente:', (error as any).response?.data || (error as any).message);
       Alert.alert('Error', 'No se pudo encontrar al cliente');
     }
   };
 
   const handleClientSelect = (client: ClientInterface): void => {
     setFoundClient(client);
-    setSelectedClientMessage(`Has seleccionado a ${client.name}`); // Establece el mensaje
+    setSelectedClientMessage(`Has seleccionado a ${client.name}`);
   };
 
   const handleSubmit = async () => {
@@ -149,19 +180,19 @@ const AddDevice: React.FC = () => {
       brand,
       model,
       serialNumber,
-      userId: foundClient.id // Asegúrate de que estás enviando userId
+      userId: foundClient.id
     };
   
     try {
       const response = await api.post('/api/device/save', deviceData);
-      Alert.alert('Éxito', response.data); // Suponiendo que la respuesta es un mensaje
+      Alert.alert('Éxito', response.data);
       resetForm();
       setType('');
       setBrand('');
       setModel('');
       setSerialNumber('');
     } catch (error) {
-      console.error('Error al guardar el dispositivo:', error);
+      console.error('Error al guardar el dispositivo:', (error as any).response?.data || (error as any).message);
       Alert.alert('Error', 'Ocurrió un problema al guardar el dispositivo');
     }
   };
@@ -231,7 +262,6 @@ const AddDevice: React.FC = () => {
             />
           ),
         },
-        // Mostrar mensaje de selección
         {
           key: 'Mensaje Selección',
           component: (
@@ -248,15 +278,9 @@ const AddDevice: React.FC = () => {
         {
           key: 'Agregar Dispositivo',
           component: (
-            <ConfirmButton title="Agregar Dispositivo" onPress={handleSubmit} />
-          ),
-        },
-        {
-          key: 'Volver',
-          component: (
-            <TouchableOpacity onPress={() => { /* Lógica para volver */ }} style={styles.backButton}>
-              <Text style={styles.buttonText}>Volver</Text>
-            </TouchableOpacity>
+            <Button mode="contained" onPress={handleSubmit} style={styles.button}>
+              Agregar Dispositivo
+            </Button>
           ),
         },
       ],
@@ -269,6 +293,7 @@ const AddDevice: React.FC = () => {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={100}
     >
+      <Text style={styles.title}>Gestión de Dispositivos</Text>
       <SectionListWrapper sections={sections} />
     </KeyboardAvoidingView>
   );

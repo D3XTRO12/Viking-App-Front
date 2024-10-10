@@ -1,11 +1,17 @@
-import React, { useState } from 'react';
-import { View, TextInput, TouchableOpacity, Text, StyleSheet, Alert } from 'react-native';
-import api from '../components/axios/Axios'; // Importa el nuevo archivo Axios.tsx
+import React, { useState, useEffect } from 'react';
+import { View, Text, Image, KeyboardAvoidingView, Platform, StyleSheet } from 'react-native';
+import { TextInput, Card, IconButton } from 'react-native-paper';
+import api from '../components/axios/Axios';
+
+import styles from '../components/styles/Styles';
 import * as SecureStore from 'expo-secure-store';
-import { useAuth } from '../components/context/AuthContext'; // Importa el contexto de autenticación
-import { useNavigation } from '@react-navigation/native'; // Importa useNavigation
+import { useAuth } from '../components/context/AuthContext';
+import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList } from '../components/navigation/Types'; // O donde tengas definido tu stack
+import { RootStackParamList } from '../components/navigation/Types';
+import axios from 'axios';
+import ConfirmButton from '../components/buttons/ConfirmButton';
+import { FlashList } from '@shopify/flash-list';
 
 interface AuthResponse {
   accessToken: string;
@@ -13,96 +19,101 @@ interface AuthResponse {
 }
 
 const Login: React.FC = () => {
-  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>(); // Añade la navegación
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { login, isAuthenticated, isLoading } = useAuth();
+  const [showPassword, setShowPassword] = useState(false);
+  const { login, isAuthenticated, isLoading, user } = useAuth();
+
+  useEffect(() => {
+    if (user) {
+      console.log(`Autenticación exitosa. Email del usuario: ${user.email}`);
+    }
+  }, [user]);
 
   const handleLogin = async () => {
     try {
-      const response = await api.post('/auth/login', { email, password });
-      if (response && response.status === 200) {
-        const authData: AuthResponse = response.data;
-        
-        // Asegúrate de que el token sea una cadena
-        const token = authData.accessToken;
-        if (typeof token !== 'string') {
-          throw new Error('El token recibido no es una cadena válida');
-        }
-  
-        // Guarda el token como una cadena
-        await SecureStore.setItemAsync('token', token);
-        
-        // Llama a la función login del contexto de autenticación
-        await login({ email, token });
-        
-        Alert.alert('Éxito', 'Iniciaste sesión correctamente');
-      } else if (response && response.status >= 400) {
-        Alert.alert('Error', 'Credenciales inválidas');
-        console.error('Credenciales inválidas:', response.data);
+      const response = await api.post<AuthResponse>('/auth/login', { email, password });
+
+      if (response.data && response.data.accessToken) {
+        const { accessToken, tokenType } = response.data;
+        console.log('Autenticación exitosa');
+        await SecureStore.setItemAsync('token', accessToken);
+        await login({ accessToken, tokenType });
       } else {
-        Alert.alert('Error', 'Ocurrió un error inesperado');
-        console.error('Respuesta inesperada:', response);
+        throw new Error('Respuesta del servidor no válida');
       }
     } catch (error) {
       console.error('Error durante el login:', error);
-      if (error instanceof Error) {
-        Alert.alert('Error', `Ocurrió un error durante el login: ${error.message}`);
+      if (axios.isAxiosError(error)) {
+        // Manejo de errores con Axios
+      } else if (error instanceof Error) {
+        console.error(`Ocurrió un error durante el login: ${error.message}`);
       } else {
-        Alert.alert('Error', 'Ocurrió un error desconocido durante el login');
+        console.error('Ocurrió un error desconocido durante el login');
       }
     }
-  };  return (
-    <View style={styles.container}>
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
+  };
+
+  const renderItem = () => (
+    <>
+      <Image 
+        source={require('../images/icons/LOGO.png')}
+        style={styles.logo} 
+        resizeMode="contain"
       />
-      <TextInput
-        style={styles.input}
-        placeholder="Contraseña"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
+      <Text style={styles.title}>Iniciar Sesión</Text>
+      <Card style={styles.card}>
+      <Card.Content>
+        <TextInput
+          label="Email"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          style={styles.input}
+        />
+        <View style={styles.passwordInputContainer}>
+          <TextInput
+            label="Contraseña"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry={!showPassword}
+            style={[styles.input, { flex: 1 }]}
+          />
+          <IconButton
+            icon={showPassword ? 'eye-off' : 'eye'}
+            onPress={() => setShowPassword(!showPassword)}
+            style={styles.passwordToggle}
+          />
+        </View>
+        <ConfirmButton 
+          title={isLoading ? 'Cargando...' : 'Iniciar Sesión'} 
+          onPress={handleLogin} 
+        />
+        {user && (
+          <Text style={styles.userInfo}>Usuario autenticado: {user.email}</Text>
+        )}
+      </Card.Content>
+    </Card>
+    </>
+  );
+
+  return (
+    <KeyboardAvoidingView 
+      style={styles.container} 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={100} // Ajusta según sea necesario
+    >
+      
+      <FlashList
+        data={[{}]} // Usamos un array con un solo objeto para renderizar un solo elemento
+        renderItem={renderItem}
+        keyExtractor={(item, index) => index.toString()} // Genera un key único
+        estimatedItemSize={200} // Ajusta según el tamaño de tu contenido
       />
-      <TouchableOpacity 
-        style={styles.button} 
-        onPress={handleLogin}
-        disabled={isLoading}
-      >
-        <Text style={styles.buttonText}>{isLoading ? 'Iniciando...' : 'Iniciar Sesión'}</Text>
-      </TouchableOpacity>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: 20,
-  },
-  input: {
-    height: 40,
-    borderColor: 'gray',
-    borderWidth: 1,
-    marginBottom: 10,
-    paddingHorizontal: 10,
-  },
-  button: {
-    backgroundColor: 'blue',
-    padding: 10,
-    alignItems: 'center',
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: 'white',
-    fontSize: 16,
-  },
-});
 
 export default Login;

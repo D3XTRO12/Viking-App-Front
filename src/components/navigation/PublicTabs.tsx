@@ -3,7 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import Home from '../../screens/Home';
-import WorkOrders from '../../screens/WorkOrder';
+// import WorkOrders from '../../screens/WorkOrder';
 import Login from '../../screens/Login';
 
 export type PublicTabParamList = {
@@ -24,9 +24,9 @@ const PublicTabs = () => {
             case 'Home':
               iconName = 'home';
               break;
-            case 'WorkOrders':
-              iconName = 'briefcase';
-              break;
+            // case 'WorkOrders':
+            //   iconName = 'briefcase';
+            //   break;
             case 'Login':
               iconName = 'log-in';
               break;
@@ -42,17 +42,17 @@ const PublicTabs = () => {
           component={Home}
           options={{ 
             tabBarLabel: 'Inicio', 
-            title: 'Bienvenido a El Vikingo App' // Cambia el título aquí
+            title: 'Bienvenido a El Vikingo App'
           }} 
         />
-        <PublicTab.Screen
+        {/* <PublicTab.Screen
           name="WorkOrders"
           component={WorkOrders}
           options={{ 
             tabBarLabel: 'Órdenes de Trabajo', 
             title: 'Órdenes de Trabajo' // Cambia el título aquí
           }} 
-        />
+        /> */}
         <PublicTab.Screen
           name="Login"
           component={Login}

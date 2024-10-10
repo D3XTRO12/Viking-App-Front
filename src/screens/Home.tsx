@@ -1,82 +1,70 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, Dimensions } from 'react-native';
+import { Image, Dimensions, View } from 'react-native';
+import { Card, Title, Paragraph, Text } from 'react-native-paper';
+import { FlashList } from '@shopify/flash-list';
+import styles from '../components/styles/Styles';
+import Carousel from '../components/styles/Carousel';
+import { cardio } from 'ldrs';
 
 const { width, height } = Dimensions.get('window');
 
+interface Item {
+  id: string;
+  type: 'image' | 'text' | 'photo';
+}
+
 const Home = () => {
+  const items: Item[] = [
+    { id: 'header', type: 'image' },
+    { id: 'businessDescription', type: 'text' },
+    { id: 'photosHeader', type: 'photo' }, // Combinar fotos en un único ítem
+  ];
+
+  const renderItem = ({ item }: { item: Item }) => {
+    switch (item.type) {
+      case 'image':
+        return (
+          <Image
+            source={require('../images/icons/LOGO.png')}
+            style={{ width, height: height * 0.4, opacity: 1 }}
+          />
+        );
+      case 'text':
+        return (
+          <Card style={styles.card}>
+            <Card.Content>
+              <Title style={styles.title}>Nuestro Negocio</Title>
+              <Paragraph>
+                Nos dedicamos a la reparación de computadoras, soporte de software, asesoramiento en compra de componentes y servicios completos a consolas.
+              </Paragraph>
+            </Card.Content>
+          </Card>
+        );
+      case 'photo':
+        return (
+          <View style={{ marginVertical: 16 }}>
+            <Text style={styles.subtitle}>Fotos de nuestros trabajos</Text>
+            <Carousel
+              items={[
+                { id: 'before', image: require('../images/trabajo1.jpg'), label: 'Antes' },
+                { id: 'after', image: require('../images/trabajo2.jpeg'), label: 'Después' },
+              ]}
+            />
+          </View>
+        );
+    }
+  };
+
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Image source={require('../images/icons/LOGO.png')} style={styles.backgroundImage} />
-      <View style={styles.overlay} />
-      <View style={styles.content}>
-        <Text style={styles.title}>Nuestro Negocio</Text>
-        <Text style={styles.description}>
-          Nos dedicamos a la reparación de computadoras, soporte de software (instalación de programas y sistemas operativos
-          GNU/LINUX y Windows), asesoramiento en compra de componentes y computadoras completas, y servicios completos a consolas.
-        </Text>
-        <Text style={styles.subtitle}>Fotos de nuestros trabajos</Text>
-        <View style={styles.photosContainer}>
-          <Image source={require('../images/trabajo1.jpg')} style={styles.photo} />
-          <Image source={require('../images/trabajo2.jpeg')} style={styles.photo} />
-        </View>
-      </View>
-    </ScrollView>
+    <>
+     <FlashList
+        data={items}
+        renderItem={renderItem}
+        estimatedItemSize={height / 5}
+        contentContainerStyle={{ paddingVertical: 16 }}
+      />
+    </>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    position: 'relative',
-  },
-  backgroundImage: {
-    position: 'absolute',
-    width: width,
-    height: height,
-    opacity: 0.5,
-    zIndex: -1,
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    zIndex: -1,
-  },
-  content: {
-    flex: 1,
-    padding: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#cc0000',
-    marginBottom: 10,
-  },
-  description: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  subtitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#cc0000',
-    marginBottom: 10,
-  },
-  photosContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
-  },
-  photo: {
-    width: 100,
-    height: 100,
-    borderRadius: 10,
-    marginHorizontal: 10,
-  },
-});
 
 export default Home;

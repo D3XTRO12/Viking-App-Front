@@ -1,32 +1,43 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, FlatList, Image, Modal, TouchableOpacity, Dimensions } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, FlatList, Image, Modal, TouchableOpacity, Dimensions, Alert } from 'react-native';
+import { Button } from 'react-native-paper';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-  runOnJS,
-} from 'react-native-reanimated';
-import {
-  Gesture,
-  GestureDetector,
-} from 'react-native-gesture-handler';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import api from '../components/axios/Axios';
+import axios from 'axios';
+import { WorkOrder } from '../components/interfaces/WorkOrderInterface';
+import AuthedImage from '../components/types/AuthedImages';
+import { useAuth } from '../components/context/AuthContext';
+import { jwtDecode } from 'jwt-decode';
+import styles from '../components/styles/Styles';
+import { Card, Paragraph, Title } from 'react-native-paper';
+import AddWorkOrder from './AddWorkOrder';
+
+
 
 interface DiagnosticPoint {
-  id: number;
-  timestamp: string;
+  id: string;
+  timestamp: number;
   description: string;
   multimediaFiles: string[];
+  notes: string;
 }
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-
-const WorkOrder: React.FC = () => {
-  const [orderNumber, setOrderNumber] = useState<string>('');
-  const [documentNumber, setDocumentNumber] = useState<string>('');
+const WorkOrderComponent: React.FC = () => {
+  const [modalStatusVisible, setModalStatusVisible] = useState(false);
+const [selectedStatus, setSelectedStatus] = useState('');
+const [orderId, setOrderId] = useState('');
+  const [showAddWorkOrder, setShowAddWorkOrder] = useState<boolean>(false);
+  const [isStaff, setIsStaff] = useState<boolean>(false);
+  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [diagnostics, setDiagnostics] = useState<DiagnosticPoint[] | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState<boolean>(false);
+  const [viewingDiagnostics, setViewingDiagnostics] = useState<boolean>(false);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  const { getToken } = useAuth();
 
   const scale = useSharedValue<number>(1);
   const savedScale = useSharedValue<number>(1);
@@ -35,22 +46,112 @@ const WorkOrder: React.FC = () => {
   const focusX = useSharedValue<number>(0);
   const focusY = useSharedValue<number>(0);
 
-  const handleSearch = async () => {
-    try {
-      const response = await fetch(`http://172.28.205.8:8080/auth/diagnostic-points/by-work-order/${orderNumber}/client/${documentNumber}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      if (!response.ok) {
-        throw new Error('Error al obtener los puntos de diagnóstico');
-      }
-      const data: DiagnosticPoint[] = await response.json();
-      setDiagnostics(data);
-    } catch (error) {
-      console.error('Error fetching diagnostic points:', error);
+  useEffect(() => {
+    initializeUserData();
+  }, []);
+
+  const handleCreateWorkOrder = () => {
+    setShowAddWorkOrder(true);
+  };
+
+  const handleBackFromAddWorkOrder = () => {
+    setShowAddWorkOrder(false);
+    // Opcional: Actualizar la lista de órdenes de trabajo después de crear una nueva
+    if (userId) {
+      fetchWorkOrders(isStaff, userId);
     }
+  };
+  
+  const initializeUserData = async () => {
+    try {
+      const token = await getToken();
+      if (token) {
+        const decodedToken = jwtDecode<{ sub: string }>(token);
+        const email = decodedToken.sub;
+        const userResponse = await api.get(`/api/user/search?query=by-email&email=${email}`);
+        const fetchedUserId = userResponse.data.id;
+        setUserId(fetchedUserId);
+
+        const staffResponse = await api.get<boolean>('/api/user-roles/is-staff');
+        const staffStatus = staffResponse.data;
+        setIsStaff(staffStatus);
+
+        await fetchWorkOrders(staffStatus, fetchedUserId);
+      }
+    } catch (error) {
+      console.error('Error initializing user data:', error);
+      handleApiError(error);
+    }
+  };
+
+  const fetchWorkOrders = async (staffStatus: boolean, fetchedUserId: string) => {
+    try {
+      const endpoint = staffStatus
+        ? '/api/work-order/search?query=all'
+        : `/api/work-order/search?query=by-clientid&clientId=${fetchedUserId}`;
+  
+      const response = await api.get<WorkOrder[]>(endpoint);
+  
+      if (response && response.data) {
+        // Filtrar las órdenes de trabajo por repairStatus y estado
+        const filteredWorkOrders = response.data.filter(
+          (workOrder) => 
+            workOrder.repairStatus === 'In Diagnosis' || 
+            workOrder.repairStatus === 'Under Repair'
+        );
+  
+        setWorkOrders(filteredWorkOrders);
+        setViewingDiagnostics(false);
+      } else {
+        throw new Error('Respuesta vacía o inválida del servidor');
+      }
+    } catch (error) {
+      handleApiError(error);
+    }
+  };
+  
+
+  const handleSearch = async (orderId: string, clientId: string) => {
+    try {
+      const response = await api.get<DiagnosticPoint[]>(`/api/diagnostic-points/by-work-order/${orderId}/client/${clientId}`);
+      setDiagnostics(response.data);
+      setViewingDiagnostics(true);
+    } catch (error) {
+      Alert.alert('Error', 'No se pudieron obtener los puntos de diagnóstico.');
+    }
+  };
+
+  const handleUpdateStatus = async (orderId: string, newStatus: string) => {
+    try {
+      await api.put(`/api/work-order/${orderId}`, { repairStatus: newStatus });
+      if (userId) {
+        await fetchWorkOrders(isStaff, userId);
+        Alert.alert('Éxito', 'Estado de la orden actualizado.');
+      } else {
+        throw new Error('User ID is null');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo actualizar el estado de la orden.');
+    }
+  };
+
+  const handleDeleteOrder = async (orderId: string) => {
+    try {
+      await api.delete(`/work-orders/${orderId}`);
+      if (userId) {
+        await fetchWorkOrders(isStaff, userId);
+        Alert.alert('Éxito', 'Orden de trabajo eliminada.');
+      } else {
+        throw new Error('User ID is null');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo eliminar la orden de trabajo.');
+    }
+  };
+
+  const handleBackToWorkOrders = () => {
+    setViewingDiagnostics(false);
+    setDiagnostics(null);
   };
 
   const handleImagePress = (fileUrl: string) => {
@@ -70,6 +171,20 @@ const WorkOrder: React.FC = () => {
     translateX.value = withTiming(0);
     translateY.value = withTiming(0);
     savedScale.value = 1;
+  };
+
+  const handleApiError = (error: any) => {
+    if (axios.isAxiosError(error)) {
+      if (error.response) {
+        Alert.alert('Error', 'Hubo un problema con la solicitud. Por favor, intenta de nuevo.');
+      } else if (error.request) {
+        Alert.alert('Error', 'No se recibió respuesta del servidor. Por favor, verifica tu conexión a internet.');
+      } else {
+        Alert.alert('Error', 'Ocurrió un error inesperado. Por favor, intenta de nuevo más tarde.');
+      }
+    } else {
+      Alert.alert('Error', 'Ocurrió un error inesperado. Por favor, intenta de nuevo más tarde.');
+    }
   };
 
   const pinchGesture = Gesture.Pinch()
@@ -111,7 +226,6 @@ const WorkOrder: React.FC = () => {
     });
 
   const composed = Gesture.Simultaneous(pinchGesture, panGesture, doubleTapGesture);
-
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
       { translateX: translateX.value },
@@ -120,177 +234,170 @@ const WorkOrder: React.FC = () => {
     ],
   }));
 
+  const renderWorkOrderItem = ({ item }: { item: WorkOrder }) => (
+    <Card style={styles.workOrderItem}>
+      <Card.Content>
+        <Text>Orden N°: {item.id}</Text>
+        <Text>Estado: {item.repairStatus}</Text>
+        {isStaff && (
+          <View>
+            <Button
+              mode="contained"
+              onPress={() => handleUpdateStatusModal(item.id)}
+              style={styles.workOrderButton}
+              labelStyle={styles.buttonText}
+            >
+              Actualizar Estado
+            </Button>
+            <Button
+              mode="contained"
+              onPress={() => handleDeleteOrder(item.id)}
+              style={[styles.workOrderButton, { backgroundColor: 'red' }]} 
+              labelStyle={styles.workOrderButtonText}
+            >
+              Eliminar
+            </Button>
+          </View>
+        )}
+        <Button
+          mode="contained"
+          onPress={() => handleSearch(item.id, item.clientId)}
+          style={styles.workOrderButton}
+          labelStyle={styles.workOrderButtonText}
+        >
+          Ver Diagnósticos
+        </Button>
+      </Card.Content>
+    </Card>
+  );
+
+  const handleUpdateStatusModal = (id: string) => {
+    setOrderId(id);
+    setModalStatusVisible(true);
+    setSelectedStatus('');
+  };
+
+  const handleStatusChange = (status: string) => {
+    setSelectedStatus(status);
+  };
   
+  const handleUpdateStatusConfirm = async () => {
+    if (selectedStatus) {
+      await handleUpdateStatus(orderId, selectedStatus);
+      setModalStatusVisible(false);
+    }
+  };
+  const renderUpdateStatusModal = () => {
+    if (modalStatusVisible) {
+      return (
+        <Modal visible={modalStatusVisible} transparent={true}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Actualizar Estado</Text>
+            <View style={styles.statusList}>
+              <TouchableOpacity onPress={() => handleStatusChange('In Progress')}>
+                <Text style={styles.statusItem}>En Progreso</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => handleStatusChange('Completed')}>
+                <Text style={styles.statusItem}>Completado</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => handleStatusChange('Pending')}>
+                <Text style={styles.statusItem}>Pendiente de confirmacion</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => handleStatusChange('Canceled')}>
+                <Text style={styles.statusItem}>Cancelado</Text>
+              </TouchableOpacity>
+            </View>
+            <Button mode="contained" onPress={handleUpdateStatusConfirm} style={styles.button}>
+              Actualizar Estado
+            </Button>
+            <Button mode="contained" onPress={() => setModalStatusVisible(false)} style={styles.button}>
+              Cancelar
+            </Button>
+          </View>
+        </Modal>
+      );
+    } else {
+      return null;
+    }
+  };
+  const renderDiagnosticItem = ({ item }: { item: DiagnosticPoint }) => (
+    <Card style={styles.diagnosticItem}>
+      <Card.Content>
+        <Text style={styles.diagnosticTime}>
+          {new Date(item.timestamp).toLocaleString()}
+        </Text>
+        <Text style={styles.diagnosticDescription}>{item.description}</Text>
+        <Text style={styles.diagnosticNotes}>Notas: {item.notes}</Text>
+        {item.multimediaFiles && item.multimediaFiles.length > 0 && (
+          <FlatList
+            data={item.multimediaFiles}
+            keyExtractor={(fileUrl) => fileUrl}
+            renderItem={({ item: fileUrl }) => (
+              <TouchableOpacity onPress={() => handleImagePress(fileUrl)}>
+                <AuthedImage fileUrl={fileUrl} />
+              </TouchableOpacity>
+            )}
+            horizontal
+          />
+        )}
+      </Card.Content>
+    </Card>
+  );
+  
+  if (showAddWorkOrder) {
+    return <AddWorkOrder onBack={handleBackFromAddWorkOrder} />;
+  }
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <View style={styles.container}>
-        <Text style={styles.title}>Buscar Orden de Trabajo</Text>
+        <Text style={styles.title}>Gestor de Órdenes de Trabajo</Text>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Número de Orden"
-          value={orderNumber}
-          onChangeText={setOrderNumber}
-          keyboardType="numeric"
-        />
-
-        <TextInput
-          style={styles.input}
-          placeholder="Número de Documento del Cliente"
-          value={documentNumber}
-          onChangeText={setDocumentNumber}
-          keyboardType="numeric"
-        />
-
-        <Button title="Buscar" onPress={handleSearch} color="#cc0000" />
-
-        {diagnostics && (
-          <View style={styles.resultsContainer}>
-            <Text style={styles.resultsTitle}>Puntos del Diagnóstico:</Text>
-            <FlatList
-              data={diagnostics}
-              keyExtractor={(item) => item.id.toString()}
-              renderItem={({ item }) => (
-                <View style={styles.diagnosticItem}>
-                  <Text style={styles.diagnosticTime}>
-                    {new Date(item.timestamp).toLocaleString()}
-                  </Text>
-                  <Text style={styles.diagnosticDescription}>{item.description}</Text>
-
-                  {/* Mostrar imágenes asociadas */}
-                  {item.multimediaFiles && item.multimediaFiles.length > 0 && (
-                    <FlatList
-                      data={item.multimediaFiles}
-                      keyExtractor={(fileUrl) => fileUrl}
-                      renderItem={({ item: fileUrl }) => (
-                        <TouchableOpacity onPress={() => handleImagePress(fileUrl)}>
-                          <Image
-                            source={{ uri: fileUrl }}
-                            style={styles.image}
-                            resizeMode="cover"
-                            onError={(error) => console.log('Error loading image:', error.nativeEvent.error)}
-                          />
-                        </TouchableOpacity>
-                      )}
-                      horizontal
-                    />
-                  )}
-                </View>
-              )}
-            />
-          </View>
+        {isStaff && (
+          <Button
+            mode="contained"
+            onPress={handleCreateWorkOrder}
+            style={styles.button}
+            labelStyle={styles.buttonText}
+          >
+            Crear Orden de Trabajo
+          </Button>
         )}
 
-        {/* Modal para mostrar la imagen a pantalla completa con pinch-to-zoom */}
-        <Modal visible={modalVisible} transparent={true} onRequestClose={closeModal}>
-          <View style={styles.modalBackground}>
-            <TouchableOpacity style={styles.closeButton} onPress={closeModal}>
-              <Text style={styles.closeButtonText}>Cerrar</Text>
-            </TouchableOpacity>
-            {selectedImage && (
-              <GestureDetector gesture={composed}>
-                <Animated.View style={[styles.imageContainer, animatedStyle]}>
-                  <Image
-                    source={{ uri: selectedImage }}
-                    style={styles.fullScreenImage}
-                    resizeMode="contain"
-                  />
-                </Animated.View>
-              </GestureDetector>
-            )}
+        {viewingDiagnostics ? (
+          <View>
+            <Button mode="contained" onPress={handleBackToWorkOrders} style={styles.button}>
+              Volver a Órdenes
+            </Button>
+            <FlatList
+              data={diagnostics}
+              keyExtractor={(item) => item.id}
+              renderItem={renderDiagnosticItem}
+            />
           </View>
-        </Modal>
+        ) : (
+          <FlatList
+            data={workOrders}
+            keyExtractor={(item) => item.id}
+            renderItem={renderWorkOrderItem}
+          />
+        )}
       </View>
+  
+      <Modal visible={modalVisible} transparent={true}>
+        <GestureDetector gesture={composed}>
+          <Animated.View style={[styles.modalContainer, animatedStyle]}>
+            {selectedImage && (
+              <AuthedImage fileUrl={selectedImage} style={styles.fullScreenImage} />
+            )}
+            <Button mode="text" onPress={closeModal}>
+              Cerrar
+            </Button>
+          </Animated.View>
+        </GestureDetector>
+      </Modal>
+      {renderUpdateStatusModal()}
     </GestureHandlerRootView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    justifyContent: 'center',
-    backgroundColor: '#f9f9f9',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  input: {
-    height: 50,
-    borderColor: '#ddd',
-    borderWidth: 1,
-    borderRadius: 8,
-    marginBottom: 20,
-    paddingHorizontal: 10,
-    backgroundColor: '#fff',
-  },
-  resultsContainer: {
-    marginTop: 20,
-  },
-  resultsTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#cc0000',
-    marginBottom: 10,
-  },
-  diagnosticItem: {
-    marginBottom: 15,
-    padding: 15,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-  },
-  diagnosticTime: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 5,
-  },
-  diagnosticDescription: {
-    fontSize: 16,
-    marginBottom: 10,
-  },
-  image: {
-    width: 150,
-    height: 150,
-    marginRight: 10,
-    borderRadius: 8,
-  },
-  modalBackground: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
-  },
-  imageContainer: {
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  fullScreenImage: {
-    width: '100%',
-    height: '100%',
-  },
-  closeButton: {
-    position: 'absolute',
-    top: 40,
-    right: 20,
-    backgroundColor: 'white',
-    padding: 10,
-    borderRadius: 20,
-    zIndex: 1,
-  },
-  closeButtonText: {
-    color: '#cc0000',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-});
-
-export default WorkOrder;
+export default WorkOrderComponent;

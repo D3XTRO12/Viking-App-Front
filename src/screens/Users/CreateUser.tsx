@@ -130,37 +130,37 @@ const CreateUser: React.FC<CreateUserProps> = ({ onBack }) => {
 
   return (
     <ScrollView style={styles.container}>
-    <View style={styles.container}>
-      <Text style={styles.title}>Crear Nuevo Cliente</Text>
+      <View style={styles.container}>
+        <Text style={styles.title}>Crear Nuevo Cliente</Text>
 
-      <Text style={styles.label}>Nombre</Text>
-      <TextInput
-        style={styles.input}
-        value={name}
-        onChangeText={setName}
-        placeholder="Nombre completo"
-      />
+        <Text style={styles.label}>Nombre</Text>
+        <TextInput
+          style={styles.input}
+          value={name}
+          onChangeText={setName}
+          placeholder="Nombre completo"
+        />
 
-      <Text style={styles.label}>DNI</Text>
-      <TextInput
-        style={styles.input}
-        value={dni}
-        onChangeText={setDni}
-        placeholder="DNI"
-        keyboardType="numeric"
-      />
+        <Text style={styles.label}>DNI</Text>
+        <TextInput
+          style={styles.input}
+          value={dni}
+          onChangeText={setDni}
+          placeholder="DNI"
+          keyboardType="numeric"
+        />
 
-      <Text style={styles.label}>Tipo de Usuario</Text>
-      <Picker
-        selectedValue={userType}
-        onValueChange={(itemValue) => setUserType(itemValue)}
-        style={styles.picker}
-      >
-        <Picker.Item label="Seleccione un tipo" value="" />
-        <Picker.Item label="Usuario final" value="end-user" />
-        <Picker.Item label="Staff" value="staff" />
-        <Picker.Item label="Compañía" value="company" />
-      </Picker>
+        <Text style={styles.label}>Tipo de Usuario</Text>
+        <Picker
+          selectedValue={userType}
+          onValueChange={(itemValue) => setUserType(itemValue)}
+          style={styles.picker}
+        >
+          <Picker.Item label="Seleccione un tipo" value="" />
+          <Picker.Item label="Usuario final" value="end-user" />
+          <Picker.Item label="Staff" value="staff" />
+          <Picker.Item label="Compañía" value="company" />
+        </Picker>
 
       <Text style={styles.label}>Dirección</Text>
       <TextInput
@@ -235,20 +235,20 @@ const CreateUser: React.FC<CreateUserProps> = ({ onBack }) => {
         </TouchableOpacity>
       ))}
 
-      <ConfirmButton onPress={handleSubmit} title="Crear Cliente" />
-      <TouchableOpacity onPress={onBack} style={styles.backButton}>
-        <Text style={styles.buttonText}>Volver</Text>
-      </TouchableOpacity>
+        <ConfirmButton onPress={handleSubmit} title="Crear Cliente" style={styles.confirmButton} />
+        <TouchableOpacity onPress={onBack} style={styles.backButton}>
+          <Text style={styles.buttonText}>Volver</Text>
+        </TouchableOpacity>
 
-      {/* Alert Modal */}
-      <AlertModal
-        visible={modalVisible}
-        title={modalContent.title}
-        message={modalContent.message}
-        onClose={() => setModalVisible(false)}
-      />
-  </View>
-</ScrollView>
+        {/* Alert Modal */}
+        <AlertModal
+          visible={modalVisible}
+          title={modalContent.title}
+          message={modalContent.message}
+          onClose={() => setModalVisible(false)}
+        />
+      </View>
+    </ScrollView>
   );
 };
 

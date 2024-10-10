@@ -26,16 +26,16 @@ const HandleUsers: React.FC = () => {
           <View style={styles.container}>
             <Text style={styles.title}>Gestión de Usuarios</Text>
             <View style={styles.buttonContainer}>
-              <TouchableOpacity onPress={() => setScreenMode('create')} style={styles.crudButton}>
+              <TouchableOpacity onPress={() => setScreenMode('create')} style={[styles.crudButton, { backgroundColor: '#cc0000' }]}>
                 <Text style={styles.buttonText}>Crear Usuario</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => setScreenMode('read')} style={styles.crudButton}>
+              <TouchableOpacity onPress={() => setScreenMode('read')} style={[styles.crudButton, { backgroundColor: '#cc0000' }]}>
                 <Text style={styles.buttonText}>Buscar Usuarios</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => setScreenMode('update')} style={styles.crudButton}>
+              <TouchableOpacity onPress={() => setScreenMode('update')} style={[styles.crudButton, { backgroundColor: '#cc0000' }]}>
                 <Text style={styles.buttonText}>Actualizar Datos de Usuario</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => setScreenMode('delete')} style={styles.crudButton}>
+              <TouchableOpacity onPress={() => setScreenMode('delete')} style={[styles.crudButton, { backgroundColor: '#cc0000' }]}>
                 <Text style={styles.buttonText}>Eliminar Usuario</Text>
               </TouchableOpacity>
             </View>

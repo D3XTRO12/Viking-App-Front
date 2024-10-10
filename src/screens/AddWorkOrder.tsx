@@ -1,32 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, Alert, KeyboardAvoidingView, Platform, FlatList, TouchableOpacity } from 'react-native';
+import { View, Text, Alert, KeyboardAvoidingView, Platform, FlatList, TouchableOpacity } from 'react-native';
 import { useCommonHooks } from '../components/hooks/useCommonHooks';
 import api from '../components/axios/Axios';
-import styles from '../components/styles/WorkOrderStyles';
+import styles from '../components/styles/Styles';
 import SectionListWrapper from '../components/wrappers-sections/SectionListWrapper';
-import ConfirmButton from '../components/buttons/ConfirmButton';
-import SearchButton from '../components/buttons/SearchButton';
 import { DeviceInterface } from '../components/interfaces/DeviceInterface';
 import { ADMIN_ROLE_ID } from '@env';
-import axios from 'axios';
+import PickerSection from '../components/styles/PickerSection';
+import { Button, TextInput as PaperTextInput } from 'react-native-paper';
 
-// Definir interfaces para los tipos de datos que se manejan
 interface Technician {
   id: string;
   name: string;
 }
 
-interface Device {
-  id: number;
-  brand: string;
-  model: string;
-  type: string;
-  serialNumber: string;
-  userId?: string; // Hacer `userId
-  userName: string;
-}
-
-const AddWorkOrder: React.FC = () => {
+const AddWorkOrder: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const {
     issueDescription,
     setIssueDescription,
@@ -47,9 +35,8 @@ const AddWorkOrder: React.FC = () => {
     resetForm,
   } = useCommonHooks();
 
-  const [technicians, setTechnicians] = useState<Technician[]>([]); // Definir el tipo de estado como Technician[]
+  const [technicians, setTechnicians] = useState<Technician[]>([]);
 
-  // Obtener la lista de técnicos al montar el componente
   useEffect(() => {
     const fetchTechnicians = async () => {
       try {   
@@ -63,6 +50,16 @@ const AddWorkOrder: React.FC = () => {
     fetchTechnicians();
   }, []);
 
+  // Mapeo de estados en inglés y español
+  const repairStatusMap = {
+    'Pendiente': 'Pending',
+    'En Progreso': 'In Progress',
+    'Completado': 'Completed',
+    'Cancelado': 'Canceled',
+  };
+
+  const listRepairStatusSpanish = Object.keys(repairStatusMap); // Lista en español
+
   const handleClientSearch = async () => {
     if (!clientDni) {
       return Alert.alert('Error', 'Por favor, ingrese el DNI del cliente.');
@@ -75,70 +72,40 @@ const AddWorkOrder: React.FC = () => {
       Alert.alert('Error', 'No se pudo encontrar al cliente');
     }
   };
-  function isValidUUID(uuid: string) {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    return uuidRegex.test(uuid);
-  }
 
   const handleDeviceSearch = async () => {
     const trimmedBrand = deviceBrand.trim();
-
+  
     if (!trimmedBrand) {
       Alert.alert('Error', 'Por favor, ingrese la marca del dispositivo.');
       return;
     }
-
+  
     try {
       const deviceResponse = await api.get(`/api/device/search?query=by-brand&brand=${trimmedBrand}`);
-      const devices = deviceResponse.data;
-
-      interface Device {
-        id: number;
-        brand: string;
-        model: string;
-        type: string;
-        serialNumber: string;
-        userId: string;
-        userName: string;
-      }
-
-      interface UserResponse {
-        data: {
-          name: string;
-        };
-      }
-      const devicesWithUserNames: Device[] = await Promise.all(
-        devices.map(async (device: Device): Promise<Device> => {
-          if (device.userId && isValidUUID(device.userId)) {
-            try {
-              const userResponse: UserResponse = await api.get(`/api/user/search?query=by-id&id=${device.userId}`);
-              return {
-                ...device,
-                userName: userResponse.data.name || 'Desconocido',
-              };
-            } catch (error) {
-              if (axios.isAxiosError(error)) {
-                console.error('Error al obtener el nombre del usuario con ID: ${device.userId}, error.response?.data, error.response?.status');
-              } else {
-                console.error('Error desconocido al obtener el nombre del usuario con ID: ${device.userId}, error');
-              }
-              return {
-                ...device,
-                userName: 'Error al obtener nombre',
-              };
-            }
-          } else {
-            return {
-              ...device,
-              userName: 'ID de usuario no disponible o inválido',
-            };
-          }
+      const devicesWithNames = await Promise.all(
+        deviceResponse.data.map(async (device: DeviceInterface) => {
+          const clientName = await fetchClientName(device.userId);
+          return {
+            ...device,
+            userName: clientName,
+          };
         })
       );
-      setDevices(devicesWithUserNames);
+      setDevices(devicesWithNames);
     } catch (error) {
       console.error('Error al buscar dispositivos:', error);
       Alert.alert('Error', 'No se pudo encontrar los dispositivos');
+    }
+  };
+  
+  const fetchClientName = async (clientId: string) => {
+    try {
+      const response = await api.get(`/api/user/search?query=by-id&id=${clientId}`);
+      return response.data.name;
+    } catch (error) {
+      console.error('Error al obtener el nombre del cliente:', error);
+      return 'Cliente no encontrado';
     }
   };
 
@@ -152,7 +119,7 @@ const AddWorkOrder: React.FC = () => {
       clientId: foundClient.id,
       deviceId: selectedDevice.id,
       staffId: staffId,
-      repairStatus,
+      repairStatus,  // El valor en inglés ya está aquí
     };
     try {
       await api.post('/api/work-order/save', workOrderData);
@@ -163,34 +130,20 @@ const AddWorkOrder: React.FC = () => {
     }
   };
 
-  // Especificar el tipo de `item` en render
- const renderTechnicianItem = ({ item }: { item: Technician }) => (
-  <TouchableOpacity onPress={() => setStaffId(item.id)} style={styles.deviceItem}>
-    <Text>{item.name}</Text>
-  </TouchableOpacity>
-);
+  const renderTechnicianItem = ({ item }: { item: Technician }) => (
+    <TouchableOpacity onPress={() => setStaffId(item.id)} style={styles.deviceItem}>
+      <Text style={styles.clientInfoText}>{item.name}</Text>
+    </TouchableOpacity>
+  );
 
-  const renderDeviceItem = ({ item }: { item: Device }) => {
-    // Crear un objeto que coincida con `DeviceInterface`
-    const selectedDevice: DeviceInterface = {
-      id: item.id,
-      brand: item.brand,
-      model: item.model,
-      type: item.type,
-      serialNumber: item.serialNumber,
-      userName: item.userName,
-      userId: item.userId || 'N/A'  // Aseguramos que `userId` no esté indefinido
-    };
-  
-    return (
-      <TouchableOpacity onPress={() => setSelectedDevice(selectedDevice)} style={styles.deviceItem}>
-        <Text>{item.brand} {item.model}</Text>
-        <Text>Tipo: {item.type}</Text>
-        <Text>Número de serie: {item.serialNumber}</Text>
-        <Text>Nombre del Cliente: {item.userName}</Text>
-      </TouchableOpacity>
-    );
-  };
+  const renderDeviceItem = ({ item }: { item: DeviceInterface }) => (
+    <TouchableOpacity onPress={() => setSelectedDevice(item)} style={styles.deviceItem}>
+      <Text style={styles.clientInfoText}>{item.brand} {item.model}</Text>
+      <Text style={styles.clientInfoText}>Tipo: {item.type}</Text>
+      <Text style={styles.clientInfoText}>Número de serie: {item.serialNumber}</Text>
+      <Text style={styles.clientInfoText}>Nombre del Cliente: {item.userName}</Text>
+    </TouchableOpacity>
+  );
 
   const sections = [
     {
@@ -201,10 +154,11 @@ const AddWorkOrder: React.FC = () => {
           component: (
             <>
               <Text style={styles.label}>Descripción del problema</Text>
-              <TextInput
+              <PaperTextInput
                 value={issueDescription}
                 onChangeText={setIssueDescription}
                 placeholder="Descripción del problema"
+                mode="outlined"
                 style={styles.input}
               />
             </>
@@ -220,20 +174,21 @@ const AddWorkOrder: React.FC = () => {
           component: (
             <>
               <Text style={styles.label}>DNI del Cliente</Text>
-              <TextInput
+              <PaperTextInput
                 value={clientDni}
                 onChangeText={setClientDni}
                 placeholder="DNI"
                 keyboardType="numeric"
+                mode="outlined"
                 style={styles.input}
               />
-              <SearchButton title="Buscar Cliente" onPress={handleClientSearch} />
+              <Button mode="contained" onPress={handleClientSearch}>Buscar Cliente</Button>
               {foundClient && (
                 <View style={styles.clientInfoContainer}>
                   <Text style={styles.clientInfoText}>Datos del Cliente:</Text>
-                  <Text>ID: {foundClient.id}</Text>
-                  <Text>DNI: {foundClient.dni}</Text>
-                  <Text>Nombre: {foundClient.name}</Text>
+                  <Text style={styles.clientInfoText}>ID: {foundClient.id}</Text>
+                  <Text style={styles.clientInfoText}>DNI: {foundClient.dni}</Text>
+                  <Text style={styles.clientInfoText}>Nombre: {foundClient.name}</Text>
                 </View>
               )}
             </>
@@ -249,13 +204,14 @@ const AddWorkOrder: React.FC = () => {
           component: (
             <>
               <Text style={styles.label}>Marca del Dispositivo</Text>
-              <TextInput
+              <PaperTextInput
                 value={deviceBrand}
                 onChangeText={setDeviceBrand}
                 placeholder="Marca del dispositivo"
+                mode="outlined"
                 style={styles.input}
               />
-              <SearchButton title="Buscar Dispositivos" onPress={handleDeviceSearch} />
+              <Button mode="contained" onPress={handleDeviceSearch}>Buscar Dispositivos</Button>
               {devices.length > 0 && (
                 <FlatList
                   data={devices}
@@ -268,9 +224,9 @@ const AddWorkOrder: React.FC = () => {
                 <View style={styles.selectedDeviceContainer}>
                   <Text style={styles.label}>Dispositivo seleccionado:</Text>
                   <Text>{selectedDevice.brand} {selectedDevice.model}</Text>
-                  <Text>Tipo: {selectedDevice.type}</Text>
-                  <Text>Número de serie: {selectedDevice.serialNumber}</Text>
-                  <Text>Nombre del Cliente: {selectedDevice.userName}</Text>
+                  <Text style={styles.clientInfoText}>Tipo: {selectedDevice.type}</Text>
+                  <Text style={styles.clientInfoText}>Número de serie: {selectedDevice.serialNumber}</Text>
+                  <Text style={styles.clientInfoText}>Nombre del Cliente: {selectedDevice.userName}</Text>
                 </View>
               )}
             </>
@@ -307,20 +263,18 @@ const AddWorkOrder: React.FC = () => {
       ],
     },
     {
-      title: 'Campos Adicionales',
+      title: 'Estado de la Reparación',
       data: [
         {
-          key: 'Campos Adicionales',
+          key: 'Estado',
           component: (
             <>
-              <Text style={styles.label}>Estatus de reparación</Text>
-              <TextInput
+              <PickerSection
+                label="Estado"
                 value={repairStatus}
-                onChangeText={setRepairStatus}
-                placeholder="Estatus de reparación"
-                style={styles.input}
+                onValueChange={setRepairStatus}
+                items={listRepairStatusSpanish}
               />
-              <ConfirmButton title="Agregar Orden de Trabajo" onPress={handleSubmit} />
             </>
           ),
         },
@@ -330,11 +284,16 @@ const AddWorkOrder: React.FC = () => {
 
   return (
     <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={100}
     >
       <SectionListWrapper sections={sections} />
+      <Button mode="contained" onPress={handleSubmit}>
+        Agregar Orden de Trabajo
+      </Button>
+      <Button mode="text" onPress={onBack}>
+        Volver
+      </Button>
     </KeyboardAvoidingView>
   );
 };
