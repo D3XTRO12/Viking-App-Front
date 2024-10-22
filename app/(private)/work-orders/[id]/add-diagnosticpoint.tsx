@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, Alert, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TextInput, Image, Alert, StyleSheet } from 'react-native';
 import ConfirmButton from '../../../../src/components/buttons/ConfirmButton';
 import styles from '../../../../src/components/styles/Styles';
 import { useAuth } from '../../../../src/components/context/AuthContext';
@@ -7,7 +7,7 @@ import api from '../../../../src/components/axios/Axios';
 import * as ImagePicker from 'expo-image-picker';
 import { Button } from 'react-native-paper';
 import { FlashList } from '@shopify/flash-list';
-import { useRouter, useSearchParams } from 'expo-router'; // Importa useSearchParams
+import { useRouter, useLocalSearchParams } from 'expo-router'; // Importa useRoute
 
 interface DiagnosticPoint {
   workOrder: { id: string };
@@ -31,16 +31,16 @@ type Section = {
 type ListData = [...ListItem[]];
 
 const AddDiagnosticPoint: React.FC = () => {
-    const { user, getToken } = useAuth();
-    const router = useRouter(); // Usa useRouter para obtener el router
-    const { id: workOrderId } = router.params; // Obtén el id de la orden de trabajo desde los parámetros de la ruta
-  
-    const [diagnosticData, setDiagnosticData] = useState<DiagnosticPoint>({
-      workOrder: { id: workOrderId || '' },
-      timestamp: new Date().toISOString(),
-      description: '',
-      notes: ''
-    });
+  const { user, getToken } = useAuth();
+  const route = useRouter(); // Usa useRoute para acceder a la ruta actual
+  const { id: workOrderId } = useLocalSearchParams();
+
+  const [diagnosticData, setDiagnosticData] = useState<DiagnosticPoint>({
+    workOrder: { id: Array.isArray(workOrderId) ? workOrderId[0] : workOrderId || '' },
+    timestamp: new Date().toISOString(),
+    description: '',
+    notes: ''
+  });
   const [imageUri, setImageUri] = useState<string | null>(null);
 
   const handleImagePicker = async () => {
@@ -55,21 +55,8 @@ const AddDiagnosticPoint: React.FC = () => {
       const uri = result.assets[0].uri;
       setImageUri(uri);
       setDiagnosticData({ ...diagnosticData, image: uri });
-      setListData(prevData => {
-        const newData = [...prevData] as ListData;
-        newData[3] = { type: 'imagePreview', data: { uri } };
-        return newData;
-      });
     }
   };
-
-  const [listData, setListData] = useState<ListData>([
-    { type: 'description', data: {} },
-    { type: 'notes', data: {} },
-    { type: 'imagePicker', data: {} },
-    { type: 'imagePreview', data: {} },
-    { type: 'submitButton', data: {} },
-  ]);
 
   const submitForm = async () => {
     if (!diagnosticData.description || !diagnosticData.notes) {
@@ -107,7 +94,7 @@ const AddDiagnosticPoint: React.FC = () => {
           'Authorization': `Bearer ${token}`,
           'Accept': 'application/json',
         },
-        timeout: 30000, // Set a longer timeout (30 seconds)
+        timeout: 30000,
       });
 
       if (response && response.status === 200) {
