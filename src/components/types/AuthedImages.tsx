@@ -3,17 +3,22 @@ import { Image, ActivityIndicator, StyleSheet, View, Text } from 'react-native';
 import api from '../axios/Axios';
 
 interface AuthedImageProps {
-  fileUrl: string;
+  fileUrl: string | null;
+  onClose?: () => void;
   style?: any;
 }
-
-const AuthedImage: React.FC<AuthedImageProps> = ({ fileUrl, style }) => {
+const AuthedImage: React.FC<AuthedImageProps> = ({ fileUrl, onClose, style }) => {
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchImage = async () => {
+      if (!fileUrl) {
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
         setError(null);
@@ -47,6 +52,10 @@ const AuthedImage: React.FC<AuthedImageProps> = ({ fileUrl, style }) => {
 
     fetchImage();
   }, [fileUrl]);
+
+  if (!fileUrl) {
+    return null;
+  }
 
   if (loading) {
     return <ActivityIndicator size="large" color="#0000ff" />;

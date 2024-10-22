@@ -17,6 +17,7 @@ interface User {
   id: string;
   email: string;
   dni?: string;
+  name: string;
   // Otros campos que pueda tener el usuario
 }
 
@@ -274,6 +275,61 @@ const WorkOrders: React.FC = () => {
     }
   };
 
+  const renderDiagnosticsList = () => {
+    if (!diagnostics) return null;
+  
+    return (
+      <View style={styles.diagnosticsContainer}>
+        <Button 
+          mode="contained" 
+          onPress={handleBackToWorkOrders}
+          style={styles.backButton}
+        >
+          Volver a Órdenes
+        </Button>
+  
+        <FlashList
+          data={diagnostics}
+          renderItem={({ item }) => (
+            <Card style={styles.diagnosticCard}>
+              <Card.Content>
+                <Text style={styles.diagnosticDate}>
+                  Fecha: {new Date(item.timestamp).toLocaleDateString()}
+                </Text>
+                <Text style={styles.diagnosticDescription}>
+                  Descripción: {item.description}
+                </Text>
+                <Text style={styles.diagnosticNotes}>
+                  Notas: {item.notes}
+                </Text>
+                
+                {/* Renderizar imágenes si existen */}
+                {item.multimediaFiles && item.multimediaFiles.length > 0 && (
+                  <View style={styles.imageGrid}>
+                    {item.multimediaFiles.map((fileUrl, index) => (
+                      <TouchableOpacity
+                        key={index}
+                        onPress={() => handleImagePress(fileUrl)}
+                        style={styles.imageContainer}
+                      >
+                        <AuthedImage 
+                          fileUrl={fileUrl} 
+                          style={styles.thumbnailImage}
+                        />
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </Card.Content>
+            </Card>
+          )}
+          estimatedItemSize={200}
+          keyExtractor={(item) => item.id}
+        />
+      </View>
+    );
+  };
+
   const handleUpdateStatus = async (orderId: string, newStatus: string) => {
     try {
       await api.put(`/api/work-order/${orderId}`, { repairStatus: newStatus });
@@ -451,29 +507,35 @@ const WorkOrders: React.FC = () => {
 
   return (
     <GestureHandlerRootView style={styles.container}>
-      <Button 
-        mode="contained" 
-        onPress={handleCreateWorkOrder} 
-        style={styles.createButton}
-      >
-        Crear Orden de Trabajo
-      </Button>
-
-      {renderSearchBar()}
-      
-      <FlashList
-        data={workOrders}
-        renderItem={renderWorkOrderItem}
-        keyExtractor={(item) => item.id}
-        estimatedItemSize={200}
-        extraData={expandedOrderId}
-      />
+      {viewingDiagnostics ? (
+        renderDiagnosticsList()
+      ) : (
+        <>
+          <Button 
+            mode="contained" 
+            onPress={handleCreateWorkOrder} 
+            style={styles.createButton}
+          >
+            Crear Orden de Trabajo
+          </Button>
+  
+          {renderSearchBar()}
+          
+          <FlashList
+            data={workOrders}
+            renderItem={renderWorkOrderItem}
+            keyExtractor={(item) => item.id}
+            estimatedItemSize={200}
+            extraData={expandedOrderId}
+          />
+        </>
+      )}
       
       {renderUpdateStatusModal()}
       
       <Modal visible={modalVisible} transparent={true}>
         <View style={styles.modalContainer}>
-          <AuthedImage fileUrl={selectedImage} onClose={closeModal} />
+        {selectedImage && <AuthedImage fileUrl={selectedImage} onClose={closeModal} />}
         </View>
       </Modal>
     </GestureHandlerRootView>

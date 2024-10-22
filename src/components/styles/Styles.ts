@@ -514,5 +514,32 @@ workOrderButton: {
     fontSize: 20,
     marginBottom: 8,
   },
+  //work orders styles
+  diagnosticsContainer: {
+    flex: 1,
+    padding: 16,
+  },
+  diagnosticCard: {
+    marginBottom: 16,
+    elevation: 2,
+  },
+  diagnosticDate: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+
+  imageGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 8,
+  },
+
+  thumbnailImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 8,
+  },
+
 });
 export default styles;
