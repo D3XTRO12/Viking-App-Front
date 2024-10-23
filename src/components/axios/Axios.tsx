@@ -8,42 +8,87 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000, // Añade un timeout de 10 segundos
+  timeout: 10000,
 });
 
-// Función para establecer el token de autenticación
-export const setAuthToken = (token: string) => {
-  api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-};
-
-// Añade un interceptor de solicitud
+// Interceptor de solicitud mejorado
 api.interceptors.request.use(
   async (config) => {
-    const token = await SecureStore.getItemAsync('token');
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
-    } 
-    return config;
+    try {
+      const token = await SecureStore.getItemAsync('token');
+      if (token) {
+        config.headers['Authorization'] = `Bearer ${token}`;
+      } else {
+        // Log para debugging
+        console.warn('No token found in SecureStore');
+      }
+      return config;
+    } catch (error) {
+      console.error('Error accessing SecureStore:', error);
+      return config;
+    }
   },
   (error) => {
+    console.error('Request interceptor error:', error);
     return Promise.reject(error);
   }
 );
 
-// Añade un interceptor de respuesta
+// Interceptor de respuesta mejorado
 api.interceptors.response.use(
-  (response) => {
-    return response;
-  },
-  (error) => {
+  (response) => response,
+  async (error) => {
     if (error.response) {
+      const { status } = error.response;
+      
+      if (status === 401) {
+        // Token expirado o inválido
+        try {
+          await SecureStore.deleteItemAsync('token');
+          // Aquí podrías redirigir al login
+          Alert.alert('Sesión expirada', 'Por favor, vuelva a iniciar sesión');
+        } catch (e) {
+          console.error('Error clearing token:', e);
+        }
+      }
+      
+      Alert.alert('Error', error.response.data?.message || 'Error en la solicitud');
     } else if (error.request) {
-      // La solicitud fue hecha pero no se recibió respuesta
-      Alert.alert('Error', 'No se recibió respuesta del servidor');
+      Alert.alert('Error de conexión', 'No se pudo conectar con el servidor');
     } else {
-      Alert.alert('Error', 'Ocurrió un error al realizar la solicitud');
+      Alert.alert('Error', 'Ocurrió un error inesperado');
+    }
+    
     return Promise.reject(error);
-  }}
+  }
 );
+
+// Funciones auxiliares para manejar el token
+export const tokenService = {
+  async setToken(token: string) {
+    try {
+      await SecureStore.setItemAsync('token', token);
+    } catch (error) {
+      console.error('Error saving token:', error);
+    }
+  },
+  
+  async getToken() {
+    try {
+      return await SecureStore.getItemAsync('token');
+    } catch (error) {
+      console.error('Error getting token:', error);
+      return null;
+    }
+  },
+  
+  async removeToken() {
+    try {
+      await SecureStore.deleteItemAsync('token');
+    } catch (error) {
+      console.error('Error removing token:', error);
+    }
+  }
+};
 
 export default api;

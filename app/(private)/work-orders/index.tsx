@@ -3,9 +3,8 @@ import { View, Text, Modal, TouchableOpacity, Alert } from 'react-native';
 import { Button, Card, Searchbar, Surface } from 'react-native-paper';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { FlashList } from '@shopify/flash-list';
-import api from '../../../src/components/axios/Axios';
+import api, { tokenService } from '../../../src/components/axios/Axios';
 import { WorkOrder } from '../../../src/components/interfaces/WorkOrderInterface';
-import AuthedImage from '../../../src/components/types/AuthedImages';
 import { useAuth } from '../../../src/components/context/AuthContext';
 import { jwtDecode } from 'jwt-decode';
 import styles from '../../../src/components/styles/Styles';
@@ -18,30 +17,16 @@ interface User {
   email: string;
   dni?: string;
   name: string;
-  // Otros campos que pueda tener el usuario
-}
-
-interface DiagnosticPoint {
-  id: string;
-  timestamp: number;
-  description: string;
-  multimediaFiles: string[];
-  notes: string;
 }
 
 const WorkOrders: React.FC = () => {
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
-
   const [modalStatusVisible, setModalStatusVisible] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState('');
   const [orderId, setOrderId] = useState('');
   const [showAddWorkOrder, setShowAddWorkOrder] = useState<boolean>(false);
   const [isStaff, setIsStaff] = useState<boolean>(false);
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
-  const [diagnostics, setDiagnostics] = useState<DiagnosticPoint[] | null>(null);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [modalVisible, setModalVisible] = useState<boolean>(false);
-  const [viewingDiagnostics, setViewingDiagnostics] = useState<boolean>(false);
   const [userId, setUserId] = useState<string | null>(null);
 
   const [searchDni, setSearchDni] = useState<string>('');
@@ -110,7 +95,6 @@ const WorkOrders: React.FC = () => {
 
         setWorkOrders(filteredWorkOrders);
         setOriginalWorkOrders(filteredWorkOrders);
-        setViewingDiagnostics(false);
       } else {
         throw new Error('Respuesta vacía o inválida del servidor');
       }
@@ -119,7 +103,6 @@ const WorkOrders: React.FC = () => {
     }
   };
 
-  // Nuevas funciones para el sistema de búsqueda
   const handleSearchByDni = async () => {
     if (!searchDni.trim()) {
       Alert.alert('Error', 'Por favor ingrese un DNI válido');
@@ -128,14 +111,12 @@ const WorkOrders: React.FC = () => {
 
     setIsSearching(true);
     try {
-      // Primera búsqueda: encontrar usuario por DNI
       const userResponse = await api.get<User>(`/api/user/search?query=by-dni&dni=${searchDni}`);
       if (!userResponse.data) {
         Alert.alert('Error', 'No se encontró ningún usuario con ese DNI');
         return;
       }
 
-      // Segunda búsqueda: encontrar órdenes de trabajo por clientId
       const ordersResponse = await api.get<WorkOrder[]>(
         `/api/work-order/search?query=by-clientid&clientId=${userResponse.data.id}`
       );
@@ -164,14 +145,12 @@ const WorkOrders: React.FC = () => {
       const decodedToken = jwtDecode<{ sub: string }>(token);
       const email = decodedToken.sub;
 
-      // Primera búsqueda: encontrar usuario por email
       const userResponse = await api.get<User>(`/api/user/search?query=by-email&email=${email}`);
       if (!userResponse.data) {
         Alert.alert('Error', 'No se encontró información del staff');
         return;
       }
 
-      // Segunda búsqueda: encontrar órdenes de trabajo por staffId
       const ordersResponse = await api.get<WorkOrder[]>(
         `/api/work-order/search?query=by-staffid&staffId=${userResponse.data.id}`
       );
@@ -194,7 +173,6 @@ const WorkOrders: React.FC = () => {
     setSearchType('all');
   };
 
-  // Componente de búsqueda
   const renderSearchBar = () => (
     <View style={styles.searchContainer}>
       <View style={styles.searchTypeContainer}>
@@ -265,71 +243,6 @@ const WorkOrders: React.FC = () => {
     </View>
   );
 
-  const handleSearch = async (orderId: string, clientId: string) => {
-    try {
-      const response = await api.get<DiagnosticPoint[]>(`/api/diagnostic-points/by-work-order/${orderId}/client/${clientId}`);
-      setDiagnostics(response.data);
-      setViewingDiagnostics(true);
-    } catch (error) {
-      Alert.alert('Error', 'No se pudieron obtener los puntos de diagnóstico.');
-    }
-  };
-
-  const renderDiagnosticsList = () => {
-    if (!diagnostics) return null;
-  
-    return (
-      <View style={styles.diagnosticsContainer}>
-        <Button 
-          mode="contained" 
-          onPress={handleBackToWorkOrders}
-          style={styles.backButton}
-        >
-          Volver a Órdenes
-        </Button>
-  
-        <FlashList
-          data={diagnostics}
-          renderItem={({ item }) => (
-            <Card style={styles.diagnosticCard}>
-              <Card.Content>
-                <Text style={styles.diagnosticDate}>
-                  Fecha: {new Date(item.timestamp).toLocaleDateString()}
-                </Text>
-                <Text style={styles.diagnosticDescription}>
-                  Descripción: {item.description}
-                </Text>
-                <Text style={styles.diagnosticNotes}>
-                  Notas: {item.notes}
-                </Text>
-                
-                {/* Renderizar imágenes si existen */}
-                {item.multimediaFiles && item.multimediaFiles.length > 0 && (
-                  <View style={styles.imageGrid}>
-                    {item.multimediaFiles.map((fileUrl, index) => (
-                      <TouchableOpacity
-                        key={index}
-                        onPress={() => handleImagePress(fileUrl)}
-                        style={styles.imageContainer}
-                      >
-                        <AuthedImage 
-                          fileUrl={fileUrl} 
-                          style={styles.thumbnailImage}
-                        />
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-              </Card.Content>
-            </Card>
-          )}
-          estimatedItemSize={200}
-          keyExtractor={(item) => item.id}
-        />
-      </View>
-    );
-  };
-
   const handleUpdateStatus = async (orderId: string, newStatus: string) => {
     try {
       await api.put(`/api/work-order/${orderId}`, { repairStatus: newStatus });
@@ -354,21 +267,6 @@ const WorkOrders: React.FC = () => {
     }
   };
 
-  const handleBackToWorkOrders = () => {
-    setViewingDiagnostics(false);
-    setDiagnostics(null);
-  };
-
-  const handleImagePress = (fileUrl: string) => {
-    setSelectedImage(fileUrl);
-    setModalVisible(true);
-  };
-
-  const closeModal = () => {
-    setModalVisible(false);
-    setSelectedImage(null);
-  };
-
   const handleApiError = (error: any) => {
     if (axios.isAxiosError(error)) {
       if (error.response) {
@@ -382,6 +280,23 @@ const WorkOrders: React.FC = () => {
       Alert.alert('Error', 'Ocurrió un error inesperado. Por favor, intenta de nuevo más tarde.');
     }
   };
+
+  const handleNavigateTodiagnosticPoints = async (workOrder: WorkOrder) => {
+    try {
+      const token = await tokenService.getToken();
+      if (!token) {
+        Alert.alert('Error', 'No hay sesión activa. Por favor, inicie sesión.');
+        // Aquí podrías redirigir al login
+        return;
+      }
+      
+      router.push(`/work-orders/${workOrder.id}/show-diagnosticPoints?clientId=${workOrder.clientId}`);
+    } catch (error) {
+      console.error('Error navigating to diagnostic points:', error);
+      Alert.alert('Error', 'No se pudo acceder a los diagnósticos');
+    }
+  };
+  
 
   const renderWorkOrderItem = ({ item }: { item: WorkOrder }) => (
     <Surface style={styles.workOrderSurface}>
@@ -434,7 +349,7 @@ const WorkOrders: React.FC = () => {
               
               <Button
                 mode="contained"
-                onPress={() => handleSearch(item.id, item.clientId)}
+                onPress={() => handleNavigateTodiagnosticPoints(item)}
                 style={[styles.button, styles.actionButton]}
                 labelStyle={styles.workOrderButtonText}
               >
@@ -446,13 +361,11 @@ const WorkOrders: React.FC = () => {
       </Card>
     </Surface>
   );
-  
 
   const toggleExpandOrder = (id: string) => {
-    console.log('Toggle expand for order:', id); // Add this debug log
+    console.log('Toggle expand for order:', id);
     setExpandedOrderId(prevId => (prevId === id ? null : id));
   };
-  
 
   const handleUpdateStatusModal = (id: string) => {
     setOrderId(id);
@@ -507,37 +420,25 @@ const WorkOrders: React.FC = () => {
 
   return (
     <GestureHandlerRootView style={styles.container}>
-      {viewingDiagnostics ? (
-        renderDiagnosticsList()
-      ) : (
-        <>
-          <Button 
-            mode="contained" 
-            onPress={handleCreateWorkOrder} 
-            style={styles.createButton}
-          >
-            Crear Orden de Trabajo
-          </Button>
-  
-          {renderSearchBar()}
-          
-          <FlashList
-            data={workOrders}
-            renderItem={renderWorkOrderItem}
-            keyExtractor={(item) => item.id}
-            estimatedItemSize={200}
-            extraData={expandedOrderId}
-          />
-        </>
-      )}
+      <Button 
+        mode="contained" 
+        onPress={handleCreateWorkOrder} 
+        style={styles.createButton}
+      >
+        Crear Orden de Trabajo
+      </Button>
+
+      {renderSearchBar()}
+      
+      <FlashList
+        data={workOrders}
+        renderItem={renderWorkOrderItem}
+        keyExtractor={(item) => item.id}
+        estimatedItemSize={200}
+        extraData={expandedOrderId}
+      />
       
       {renderUpdateStatusModal()}
-      
-      <Modal visible={modalVisible} transparent={true}>
-        <View style={styles.modalContainer}>
-        {selectedImage && <AuthedImage fileUrl={selectedImage} onClose={closeModal} />}
-        </View>
-      </Modal>
     </GestureHandlerRootView>
   );
 };
