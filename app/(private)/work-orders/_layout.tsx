@@ -18,6 +18,17 @@ export default function WorkOrdersLayout() {
           presentation: 'modal'
         }} 
       />
+    <Stack.Screen
+      name="[id]/show-diagnosticPoints"
+      options={{
+        title: 'Diagnosticos'
+      }}
+    />
+    <Stack.Screen
+      name="[id]/add-diagnosticpoint"
+      options={{
+        title: 'Agregar Diagnostico'
+      }}/>
     </Stack>
   );
 }

@@ -179,23 +179,26 @@ const WorkOrders: React.FC = () => {
         <Button
           mode={searchType === 'all' ? 'contained' : 'outlined'}
           onPress={() => setSearchType('all')}
-          style={styles.searchTypeButton}
+          style={styles.button}
+          labelStyle={searchType === 'all' ? styles.selectedText : styles.unselectedText}
         >
           Todos
         </Button>
         <Button
           mode={searchType === 'dni' ? 'contained' : 'outlined'}
           onPress={() => setSearchType('dni')}
-          style={styles.searchTypeButton}
-        >
+          style={styles.button}
+          labelStyle={searchType === 'dni' ? styles.selectedText : styles.unselectedText}
+          >
           DNI
         </Button>
         {isStaff && (
           <Button
             mode={searchType === 'staff' ? 'contained' : 'outlined'}
             onPress={() => setSearchType('staff')}
-            style={styles.searchTypeButton}
-          >
+            style={styles.button}
+            labelStyle={searchType === 'staff' ? styles.selectedText : styles.unselectedText}
+            >
             Mis Órdenes
           </Button>
         )}
@@ -225,21 +228,23 @@ const WorkOrders: React.FC = () => {
           mode="contained" 
           onPress={handleSearchByStaffId}
           loading={isSearching}
-          style={styles.searchButton}
+          style={styles.button}
         >
           Ver Mis Órdenes
         </Button>
       )}
 
-      {searchType !== 'all' && (
-        <Button 
-          mode="outlined" 
-          onPress={resetSearch}
-          style={styles.resetButton}
-        >
-          Mostrar Todos
-        </Button>
-      )}
+{searchType !== 'all' && (
+  <Button
+    mode="outlined"
+    onPress={resetSearch}
+    style={styles.button} // Puedes mantener el estilo de botón
+    labelStyle={styles.unselectedText} // Solo asignamos el estilo de texto no seleccionado
+  >
+    Mostrar Todos
+  </Button>
+)}
+
     </View>
   );
 
@@ -363,7 +368,6 @@ const WorkOrders: React.FC = () => {
   );
 
   const toggleExpandOrder = (id: string) => {
-    console.log('Toggle expand for order:', id);
     setExpandedOrderId(prevId => (prevId === id ? null : id));
   };
 
@@ -423,7 +427,7 @@ const WorkOrders: React.FC = () => {
       <Button 
         mode="contained" 
         onPress={handleCreateWorkOrder} 
-        style={styles.createButton}
+        style={styles.button}
       >
         Crear Orden de Trabajo
       </Button>

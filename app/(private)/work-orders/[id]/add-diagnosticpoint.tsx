@@ -3,7 +3,7 @@ import { View, Text, TextInput, Image, Alert, StyleSheet } from 'react-native';
 import ConfirmButton from '../../../../src/components/buttons/ConfirmButton';
 import styles from '../../../../src/components/styles/Styles';
 import { useAuth } from '../../../../src/components/context/AuthContext';
-import api from '../../../../src/components/axios/Axios';
+import api from '../../../axios/Axios';
 import * as ImagePicker from 'expo-image-picker';
 import { Button } from 'react-native-paper';
 import { FlashList } from '@shopify/flash-list';

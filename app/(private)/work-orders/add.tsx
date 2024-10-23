@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { View, Text, Alert, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router'; // Importa el hook useRouter
 import { useCommonHooks } from '../../../src/components/hooks/useCommonHooks';
-import api from '../../../src/components/axios/Axios';
+import api from '../../axios/Axios';
 import styles from '../../../src/components/styles/Styles';
 import SectionListWrapper from '../../../src/components/wrappers-sections/SectionListWrapper';
 import { DeviceInterface } from '../../../src/components/interfaces/DeviceInterface';
@@ -42,14 +42,13 @@ const AddWorkOrder: React.FC = () => {
     queryKey: ['staff'],
     queryFn: async () => {
       const response = await api.get(`/api/user/search?query=by-role&roleId=${ADMIN_ROLE_ID}`);
-      console.log('Staffs:', response.data);
       return response.data;
     }
   });
 
   useEffect(() => {
     if (StaffsError) {
-      console.error('Error al obtener la lista de técnicos:', StaffsError);
+      Alert.alert('Error', 'No se pudieron cargar los técnicos');
     }
   }, [StaffsError]);
 

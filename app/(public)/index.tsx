@@ -34,7 +34,6 @@ const Home = () => {
             <Card.Content>
               <Title style={styles.title}>Nuestro Negocio</Title>
               <Paragraph>
-                {/* Aquí envuelvo el texto dentro de PaperText */}
                 <PaperText>
                   Nos dedicamos a la reparación de computadoras, soporte de software, asesoramiento en compra de componentes y servicios completos a consolas.
                 </PaperText>

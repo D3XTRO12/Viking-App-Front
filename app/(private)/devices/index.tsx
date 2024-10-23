@@ -10,7 +10,7 @@ import {
 import { Picker } from '@react-native-picker/picker';
 import { TextInput, Button, Paragraph } from 'react-native-paper';
 import { useCommonHooks } from '../../../src/components/hooks/useCommonHooks';
-import api from '../../../src/components/axios/Axios'; // Importa el módulo api
+import api from '../../axios/Axios'; // Importa el módulo api
 import styles from '../../../src/components/styles/Styles';
 import SectionListWrapper from '../../../src/components/wrappers-sections/SectionListWrapper';
 import { ClientInterface } from '../../../src/components/interfaces/ClientInterface';

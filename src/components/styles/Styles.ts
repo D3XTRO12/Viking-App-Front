@@ -1,4 +1,5 @@
 import { Dimensions, StyleSheet } from 'react-native';
+import { IconButton } from 'react-native-paper';
 
 const { width, height } = Dimensions.get('window');
 
@@ -37,7 +38,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#222', // Fondo gris oscuro para la información del cliente
     padding: 16,
     borderRadius: 4,
-    marginTop: 8,
+    marginTop: 0,
   },
   clientInfoText: {
     fontWeight: 'bold',
@@ -53,8 +54,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
     headerContainer: {
-      backgroundColor: '#007AFF',
-      paddingVertical: 20,
+      backgroundColor: '#d32f2f',
+      flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 8,
+    height: 50,
     },
 
     searchTypeContainer: {
@@ -66,6 +71,14 @@ const styles = StyleSheet.create({
     searchTypeButton: {
       flex: 1,
       marginHorizontal: 4,
+
+      backgroundColor: '#007AFF',
+    },
+    selectedText: {
+      color: 'white', // Color del texto cuando está seleccionado
+    },
+    unselectedText: {
+      color: 'black', // Color del texto cuando no está seleccionado
     },
   
     searchInputContainer: {
@@ -81,7 +94,7 @@ const styles = StyleSheet.create({
   
 
     formContainer: {
-      paddingHorizontal: 20,
+      paddingHorizontal: 2,
       paddingTop: 20,
     },
     imageLink: {
@@ -453,27 +466,7 @@ passwordInputContainer: {
 passwordToggle: {
   marginLeft: 10,
 },
-diagnosticItem: {
-  marginVertical: 10,
-  borderRadius: 10,
-  backgroundColor: '#2c2c2c',
-  padding: 15,
-},
-diagnosticTime: {
-  fontWeight: 'bold',
-  marginBottom: 5,
-  color: '#fff',
-},
-diagnosticDescription: {
-  fontSize: 16,
-  marginBottom: 5,
-  color: '#fff',
-},
-diagnosticNotes: {
-  fontStyle: 'italic',
-  marginBottom: 10,
-  color: '#fff',
-},
+
 
 fullScreenImage: {
   width: '100%',
@@ -482,6 +475,7 @@ fullScreenImage: {
 },
 resetButton: {
   marginTop: 8,
+  backgroundColor: '#007bff',
 },
 title: {
   fontSize: 24,
@@ -508,6 +502,7 @@ workOrderButton: {
     flex: 1,
     padding: 16,
     backgroundColor: '#000', // Fondo negro
+    minHeight: 400
   },
   sectionTitle: {
     color: 'black', // Títulos de sección en blanco
@@ -518,10 +513,6 @@ workOrderButton: {
   diagnosticsContainer: {
     flex: 1,
     padding: 16,
-  },
-  diagnosticCard: {
-    marginBottom: 16,
-    elevation: 2,
   },
   diagnosticDate: {
     fontSize: 16,
@@ -539,8 +530,32 @@ workOrderButton: {
     width: 100,
     height: 100,
     borderRadius: 8,
+    justifyContent:'center',
+    // alignContent:'center',
+    alignItems:'center'
   },
   //dg styles
+  diagnosticItem: {
+    marginVertical: 10,
+    borderRadius: 10,
+    backgroundColor: '#2c2c2c',
+    padding: 15,
+  },
+  diagnosticTime: {
+    fontWeight: 'bold',
+    marginBottom: 5,
+    color: '#fff',
+  },
+  diagnosticDescription: {
+    fontSize: 16,
+    marginBottom: 5,
+    color: '#fff',
+  },
+  diagnosticNotes: {
+    fontStyle: 'italic',
+    marginBottom: 10,
+    color: '#fff',
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -571,11 +586,14 @@ workOrderButton: {
   closeButton: {
     marginTop: 10,
   },
-  imageWithBorder: {
-    borderWidth: 2, // Grosor del borde
-    borderColor: '#cc0000', // Color del borde (puedes cambiarlo a lo que desees)
-    borderRadius: 8, // Para bordes redondeados, si lo prefieres
-  },
+//client styles
+iconButton:{
+  backgroundColor: "black"
+},
+actionButtons: {
+  paddingTop: 30,
+  backgroundColor: 'transparent',
+}
 
 });
 export default styles;

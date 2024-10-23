@@ -4,7 +4,7 @@ import { Button, Card } from 'react-native-paper';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { FlashList } from '@shopify/flash-list';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import api from '../../../../src/components/axios/Axios';
+import api from '../../../axios/Axios';
 import AuthedImage from '../../../../src/components/types/AuthedImages';
 import styles from '../../../../src/components/styles/Styles';
 
@@ -66,7 +66,7 @@ const ShowDiagnosticPoints: React.FC = () => {
           >
             <AuthedImage 
               fileUrl={fileUrl} 
-              style={[styles.thumbnailImage, styles.imageWithBorder]} // Agregando el estilo de borde
+              style={styles.thumbnailImage} // Agregando el estilo de borde
             />
           </TouchableOpacity>
         ))}
@@ -75,7 +75,7 @@ const ShowDiagnosticPoints: React.FC = () => {
   };
 
   const renderDiagnosticCard = ({ item }: { item: DiagnosticPoint }) => (
-    <Card style={styles.diagnosticCard}>
+    <Card style={styles.card}>
       <Card.Content>
         <Text style={styles.diagnosticDate}>
           Fecha: {new Date(item.timestamp).toLocaleDateString()}

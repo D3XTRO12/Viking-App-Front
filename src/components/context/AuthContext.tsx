@@ -1,7 +1,7 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { jwtDecode } from "jwt-decode";
-import api from '../axios/Axios'; // Asegúrate de que la ruta sea correcta
+import api from '../../../app/axios/Axios'; // Asegúrate de que la ruta sea correcta
 type TokenResponse = {
   accessToken: string;
   tokenType: string;

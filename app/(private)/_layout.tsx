@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Tabs, useRouter } from 'expo-router';
-import Ionicons from 'react-native-vector-icons/Ionicons';
+import { Ionicons } from '@expo/vector-icons'; // Cambiado aquí
 import { useAuth } from '../../src/components/context/AuthContext';
-import api from '../../src/components/axios/Axios';
+import api from '../axios/Axios';
 import LoadingIndicator from '../../src/components/styles/LoadingIndicator';
 
 export default function PrivateLayout() {
@@ -35,11 +35,9 @@ export default function PrivateLayout() {
       const headers = { Authorization: `Bearer ${token}` };
   
       try {
-        // Realizamos las llamadas por separado para mejor manejo de errores
         const roleResponse = await api.get<boolean>('/api/user-roles/is-staff', { headers });
         const userResponse = await api.get('/api/user/current', { headers });
   
-        // Verificamos explícitamente que tengamos las respuestas y sus datos
         if (roleResponse?.data !== undefined) {
           setIsStaff(roleResponse.data);
         } else {
@@ -68,7 +66,6 @@ export default function PrivateLayout() {
     }
   };
 
-  
   const handleLogout = async () => {
     await logout();
     router.replace('/(public)');
@@ -82,7 +79,7 @@ export default function PrivateLayout() {
     <Tabs
       screenOptions={({ route }) => ({
         tabBarIcon: ({ color, size }) => {
-          let iconName: string;
+          let iconName: keyof typeof Ionicons.glyphMap; // Tipado correcto para los iconos
           switch (route.name) {
             case 'work-orders':
               iconName = 'briefcase';

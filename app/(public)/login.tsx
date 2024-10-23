@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, Image, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { TextInput, Card, IconButton } from 'react-native-paper';
 import { useRouter } from 'expo-router';
-import api from '../../src/components/axios/Axios';
+import api from '../axios/Axios';
 import styles from '../../src/components/styles/Styles';
 import { useAuth } from '../../src/components/context/AuthContext';
 import axios from 'axios';
@@ -39,7 +39,6 @@ const Login: React.FC = () => {
 
   const handleLogin = async () => {
     try {
-      console.log('url:', api.defaults.baseURL);
       const response = await api.post<AuthResponse>('/auth/login', { email, password });
     
       if (response?.data && response.data.accessToken) {
@@ -52,15 +51,13 @@ const Login: React.FC = () => {
       } else {
         throw new Error('Respuesta del servidor no válida');
       }
-    } catch (error) {
-      console.error('Error durante el login:', error);
-  
+    } catch (error) {  
       if (axios.isAxiosError(error)) {
-        console.error(`Error de Axios: ${error.response?.data || 'Error sin respuesta'}`);
+        Alert.alert('Error', error.response?.data?.message || 'Ocurrió un error durante el login');
       } else if (error instanceof Error) {
-        console.error(`Error: ${error.message}`);
+       Alert.alert('Error', error.message);
       } else {
-        console.error('Ocurrió un error desconocido durante el login');
+        Alert.alert('Error', 'Ocurrió un error durante el login');
       }
     }
   };

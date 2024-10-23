@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { ScrollView } from 'react-native';
 import { TextInput, Button, Text, Provider as PaperProvider, Appbar, HelperText } from 'react-native-paper';
 import { router, useLocalSearchParams } from 'expo-router';
-import api from '../../../../src/components/axios/Axios';
+import api from '../../../axios/Axios';
 import { useCommonHooks } from '../../../../src/components/hooks/useCommonHooks';
+import styles from '../../../../src/components/styles/Styles'; // Asegúrate de que esta ruta sea correcta
 
 export default function EditUser() {
   const { resetForm } = useCommonHooks();
@@ -79,7 +80,6 @@ export default function EditUser() {
       };
 
       await api.put(`/api/user/update/${id}`, userData);
-
       alert('Los datos del usuario se actualizaron correctamente');
       resetForm();
       router.back();
@@ -91,11 +91,7 @@ export default function EditUser() {
 
   return (
     <PaperProvider>
-      <Appbar.Header>
-        <Appbar.BackAction onPress={() => router.back()} />
-        <Appbar.Content title="Editar Usuario" />
-      </Appbar.Header>
-      <ScrollView style={{ padding: 16 }}>
+      <ScrollView style={styles.container}>
         {!isEditing ? (
           <>
             <TextInput
@@ -104,8 +100,9 @@ export default function EditUser() {
               onChangeText={setSearchDni}
               keyboardType="numeric"
               mode="outlined"
+              style={styles.input} // Aplicando estilo
             />
-            <Button mode="contained" onPress={searchUserByDni} style={{ marginTop: 10 }}>
+            <Button mode="contained" onPress={searchUserByDni} style={styles.button}>
               Buscar Usuario
             </Button>
           </>
@@ -116,6 +113,7 @@ export default function EditUser() {
               value={name}
               onChangeText={setName}
               mode="outlined"
+              style={styles.input} // Aplicando estilo
             />
             <TextInput
               label="DNI"
@@ -124,6 +122,7 @@ export default function EditUser() {
               keyboardType="numeric"
               mode="outlined"
               disabled
+              style={styles.input} // Aplicando estilo
             />
             <HelperText type="info">El DNI no puede ser modificado</HelperText>
             <TextInput
@@ -131,6 +130,7 @@ export default function EditUser() {
               value={address}
               onChangeText={setAddress}
               mode="outlined"
+              style={styles.input} // Aplicando estilo
             />
             <TextInput
               label="Teléfono"
@@ -138,6 +138,7 @@ export default function EditUser() {
               onChangeText={setPhoneNumber}
               keyboardType="phone-pad"
               mode="outlined"
+              style={styles.input} // Aplicando estilo
             />
             <TextInput
               label="Teléfono Secundario"
@@ -145,6 +146,7 @@ export default function EditUser() {
               onChangeText={setSecondaryPhoneNumber}
               keyboardType="phone-pad"
               mode="outlined"
+              style={styles.input} // Aplicando estilo
             />
             <TextInput
               label="Email"
@@ -152,14 +154,16 @@ export default function EditUser() {
               onChangeText={setEmail}
               keyboardType="email-address"
               mode="outlined"
+              style={styles.input} // Aplicando estilo
             />
             <TextInput
               label="CUIT"
               value={cuit}
               onChangeText={setCuit}
               mode="outlined"
+              style={styles.input} // Aplicando estilo
             />
-            <Button mode="contained" onPress={handleSubmit} style={{ marginTop: 20 }}>
+            <Button mode="contained" onPress={handleSubmit} style={styles.button}>
               Actualizar Usuario
             </Button>
           </>

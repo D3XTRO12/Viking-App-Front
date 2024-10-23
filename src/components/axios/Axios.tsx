@@ -20,16 +20,13 @@ api.interceptors.request.use(
         config.headers['Authorization'] = `Bearer ${token}`;
       } else {
         // Log para debugging
-        console.warn('No token found in SecureStore');
       }
       return config;
     } catch (error) {
-      console.error('Error accessing SecureStore:', error);
       return config;
     }
   },
   (error) => {
-    console.error('Request interceptor error:', error);
     return Promise.reject(error);
   }
 );
@@ -48,7 +45,7 @@ api.interceptors.response.use(
           // Aquí podrías redirigir al login
           Alert.alert('Sesión expirada', 'Por favor, vuelva a iniciar sesión');
         } catch (e) {
-          console.error('Error clearing token:', e);
+          Alert.alert('Error', 'Ocurrió un error inesperado');
         }
       }
       
@@ -69,7 +66,7 @@ export const tokenService = {
     try {
       await SecureStore.setItemAsync('token', token);
     } catch (error) {
-      console.error('Error saving token:', error);
+      Alert.alert('Error', 'Ocurrió un error inesperado');
     }
   },
   
@@ -77,7 +74,7 @@ export const tokenService = {
     try {
       return await SecureStore.getItemAsync('token');
     } catch (error) {
-      console.error('Error getting token:', error);
+      Alert.alert('Error', 'Ocurrió un error inesperado');
       return null;
     }
   },
@@ -86,7 +83,7 @@ export const tokenService = {
     try {
       await SecureStore.deleteItemAsync('token');
     } catch (error) {
-      console.error('Error removing token:', error);
+      Alert.alert('Error', 'Ocurrió un error inesperado');
     }
   }
 };
