@@ -536,9 +536,45 @@ workOrderButton: {
   },
 
   thumbnailImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 8,
+  },
+  //dg styles
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 10,
+    alignItems: 'center',
     width: '100%',
     height: '100%',
-    borderRadius: 8,
+    justifyContent: 'center'
+  },
+  modalImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 10,
+    resizeMode: "contain"
+  },
+
+  closeButton: {
+    marginTop: 10,
+  },
+  imageWithBorder: {
+    borderWidth: 2, // Grosor del borde
+    borderColor: '#cc0000', // Color del borde (puedes cambiarlo a lo que desees)
+    borderRadius: 8, // Para bordes redondeados, si lo prefieres
   },
 
 });
